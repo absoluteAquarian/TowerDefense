@@ -143,7 +143,7 @@ public class CameraFollow : MonoBehaviour {
 
 		transform.position = Vector3.Lerp(start, end, Easing.InOutCubic(_transitionTime));
 
-		Debug.DrawLine(start, end, Color.magenta);
+	//	Debug.DrawLine(start, end, Color.magenta);
 	}
 
 	private void HandleFirstPersonMovement() {
@@ -169,8 +169,8 @@ public class CameraFollow : MonoBehaviour {
 		Vector3 targetPosition = GetThirdPersonTarget(instantMovement);
 		transform.position = targetPosition;
 
-		if (!instantMovement)
-			Debug.DrawLine(transform.position, targetPosition, Color.magenta);
+	//	if (!instantMovement)
+	//		Debug.DrawLine(transform.position, targetPosition, Color.magenta);
 	}
 
 	private void HandleThirdPersonMovement_UpdateCameraShoulder() {
@@ -328,7 +328,7 @@ public class CameraFollow : MonoBehaviour {
 					rayHasHit = true;
 
 					// Draw a line from the camera to the hit point
-					Debug.DrawRay(ray.origin, ray.direction * 5, Color.yellow);
+				//	Debug.DrawRay(ray.origin, ray.direction * 5, Color.yellow);
 				}
 			}
 		}
@@ -341,11 +341,11 @@ public class CameraFollow : MonoBehaviour {
 				_interceptor.AdjustTransform(target.transform);
 
 			// Draw a line from the camera with the view rotation
-			Debug.DrawRay(_camera.transform.position, _camera.transform.forward * 5, Color.red);
+		//	Debug.DrawRay(_camera.transform.position, _camera.transform.forward * 5, Color.red);
 		}
 
 		// Draw a line from the player to the player's forward vector
-		Debug.DrawRay(target.transform.position + target.transform.up * 1.5f, target.transform.forward * 5, Color.blue);
+	//	Debug.DrawRay(target.transform.position + target.transform.up * 1.5f, target.transform.forward * 5, Color.blue);
 	}
 
 	private Vector3 GetLookAnchor() {
