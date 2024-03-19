@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace AbsoluteCommons.Utility {
 	// Fade code taken from: https://forum.unity.com/threads/standard-material-shader-ignoring-setfloat-property-_mode.344557/
@@ -13,6 +14,8 @@ namespace AbsoluteCommons.Utility {
 	partial class TypeExtensions {
 		public static bool IsTransparent(this Material material) => material.GetTag("RenderType", false) == "Transparent";
 
+		// NOTE: does not seem to work like i thought it would
+		[Obsolete]
 		public static void SetupMaterialWithBlendMode(this Material material, BlendMode blendMode) {
 			switch (blendMode) {
 				case BlendMode.Opaque:

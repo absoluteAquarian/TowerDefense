@@ -1,6 +1,7 @@
 using AbsoluteCommons.Utility;
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements.Experimental;
 
 [AddComponentMenu("Camera-Control/CameraFollow")]
@@ -37,7 +38,7 @@ public class CameraFollow : MonoBehaviour {
 	[SerializeField, ReadOnly] private bool _oldFirstPerson;
 	[SerializeField, ReadOnly] private float _cameraShoulder;
 
-	[SerializeField, ReadOnly] private Renderer _renderer;
+	[SerializeField, ReadOnly] private Renderer[] _renderers;
 	[SerializeField, ReadOnly] private CameraFollowTargetTransformInterceptor _interceptor;
 
 	void Start() {
@@ -48,7 +49,7 @@ public class CameraFollow : MonoBehaviour {
 		if (TryGetComponent<Rigidbody>(out var body))
 			body.freezeRotation = true;
 
-		_renderer = target.GetComponentInChildren<Renderer>();
+		_renderers = target.GetComponentsInChildren<Renderer>();
 
 		_interceptor = GetComponent<CameraFollowTargetTransformInterceptor>();
 	}
@@ -68,7 +69,7 @@ public class CameraFollow : MonoBehaviour {
 
 		CheckCameraMode();
 
-		HidePlayerInFirstPerson();
+		HidePlayerInTransitionAndFirstPerson();
 
 		if (_isTransitioning)
 			HandleTransitionMovement();
@@ -112,21 +113,25 @@ public class CameraFollow : MonoBehaviour {
 		}
 	}
 
-	private void HidePlayerInFirstPerson() {
+	private void HidePlayerInTransitionAndFirstPerson() {
 		// If the camera is in first person, then the player should be hidden when the camera is close enough
 		// Otherwise, the player should always be visible
-		if (_renderer != null) {
-			bool transparent = _renderer.material.IsTransparent();
+		if (_isTransitioning) {
+			Vector3 fpTarget = target.transform.position + Vector3.up * firstPersonCameraHeight;
 
-			if (firstPerson) {
-				Vector3 fpTarget = target.transform.position + Vector3.up * firstPersonCameraHeight;
+			if (VectorMath.DistanceSquared(_camera.transform.position, fpTarget) < cullingDistance * cullingDistance)
+				SetModelTransparency(true);
+			else
+				SetModelTransparency(false);
+		} else if (firstPerson)
+			SetModelTransparency(true);
+	}
 
-				if ((_camera.transform.position - fpTarget).sqrMagnitude < cullingDistance * cullingDistance && !transparent)
-					_renderer.material.SetupMaterialWithBlendMode(BlendMode.Transparent);
-				else if (transparent)
-					_renderer.material.SetupMaterialWithBlendMode(BlendMode.Opaque);
-			} else if (!transparent)
-				_renderer.material.SetupMaterialWithBlendMode(BlendMode.Opaque);
+	private void SetModelTransparency(bool setTransparent) {
+		if (_renderers != null) {
+			// Set the lighting mode on each renderer to Shadows Only when transparent or On when not transparent
+			foreach (Renderer renderer in _renderers)
+				renderer.shadowCastingMode = setTransparent ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
 		}
 	}
 
