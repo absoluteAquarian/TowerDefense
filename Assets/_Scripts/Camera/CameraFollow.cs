@@ -11,6 +11,8 @@ public class CameraFollow : MonoBehaviour {
 	public GameObject target;
 	[SerializeField] float interpolationStrength = 5;
 	[SerializeField] bool instantMovement;
+	public bool MovesInstantlyToTarget => instantMovement;
+
 	[SerializeField] float cullingDistance = 0.7f;
 	public bool firstPerson;
 
@@ -22,7 +24,7 @@ public class CameraFollow : MonoBehaviour {
 
 	[Header("Transition Properties")]
 	[SerializeField] float transitionInterpolationStrength = 1;
-	[SerializeField] float transitionRotationStrength = 35;
+	[SerializeField] float transitionRotationStrength = 45;
 	
 	[Header("Camera Offsets")]
 	[SerializeField] Vector3 localLookAnchor = Vector3.up * 2;
@@ -100,6 +102,10 @@ public class CameraFollow : MonoBehaviour {
 	}
 
 	private void CheckCameraMode() {
+		// Toggle first person mode
+		if (Input.GetKeyDown(KeyCode.F))
+			firstPerson = !firstPerson;
+
 		// Handle starting the transition when changing modes
 		if (firstPerson) {
 			if (!_oldFirstPerson) {
@@ -156,7 +162,7 @@ public class CameraFollow : MonoBehaviour {
 		transform.position = GetFirstPersonTarget();
 	}
 
-	private Vector3 GetFirstPersonTarget() {
+	public Vector3 GetFirstPersonTarget() {
 		// The camera will attempt to move to a position relative to the target using the camera height
 		Vector3 targetPositionRelative = Vector3.up * firstPersonCameraHeight;
 
@@ -212,7 +218,7 @@ public class CameraFollow : MonoBehaviour {
 	//	localLookAnchor.x = _cameraShoulder;
 	}
 
-	private Vector3 GetThirdPersonTarget(bool useInstantMovement) {
+	public Vector3 GetThirdPersonTarget(bool useInstantMovement) {
 		// The camera will attempt to move to a position relative to the target using the offset
 		// and will look at the target with an additional Y-coordinate offset
 		Quaternion rotation = Quaternion.Euler(_view.ViewRotation);
@@ -271,7 +277,7 @@ public class CameraFollow : MonoBehaviour {
 		float z = transform.rotation.eulerAngles.z;
 
 		if (_isTransitioning)
-			transform.rotation = Quaternion.RotateTowards(transform.rotation, target, transitionRotationStrength * Time.deltaTime);
+			transform.rotation = Quaternion.Lerp(transform.rotation, target, transitionRotationStrength * Time.deltaTime);
 		else
 			transform.rotation = target;
 

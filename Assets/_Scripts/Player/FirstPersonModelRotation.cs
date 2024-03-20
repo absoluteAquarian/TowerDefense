@@ -12,10 +12,11 @@ public class FirstPersonModelRotation : MonoBehaviour {
 	private void Update() {
 		// Get the view rotation from the main camera
 		FirstPersonView view = Camera.main.GetComponent<FirstPersonView>();
+		CameraFollow follow = Camera.main.GetComponent<CameraFollow>();
 		Quaternion rotation = Quaternion.Euler(view.ViewRotation);
 
 		Vector3 positionBase = transform.parent.position + rotation * modelOffset;
-		Vector3 pivot = view.transform.position + rotation * modelOffset;
+		Vector3 pivot = follow.GetFirstPersonTarget() + rotation * modelOffset;
 
 		// Set the position and rotation of the model
 		transform.position = positionBase;

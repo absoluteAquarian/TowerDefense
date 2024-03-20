@@ -393,7 +393,7 @@ MonoBehaviour:
   firstPerson: 1
   _isCloseEnoughForFirstPerson: 0
   transitionInterpolationStrength: 1
-  transitionRotationStrength: 35
+  transitionRotationStrength: 45
   localLookAnchor: {x: 0, y: 2.1, z: 0}
   thirdPersonDistanceFromTarget: 3
   firstPersonCameraHeight: 1.5

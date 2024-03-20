@@ -15,8 +15,8 @@ namespace AbsoluteCommons.Components {
 					renderer.enabled = true;
 					renderer.shadowCastingMode = showShadowsInFirstPerson ? ShadowCastingMode.On : ShadowCastingMode.Off;
 				} else {
-					renderer.enabled = false;
-					renderer.shadowCastingMode = ShadowCastingMode.Off;
+					renderer.enabled = showShadowsInFirstPerson;
+					renderer.shadowCastingMode = showShadowsInFirstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.Off;
 				}
 			}
 		}
