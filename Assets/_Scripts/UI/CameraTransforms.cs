@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [AddComponentMenu("Debug/Camera-Transforms")]
-public class CameraTransforms : MonoBehaviour {
+public class CameraTransforms : MonoBehaviour, ISerializationCallbackReceiver {
+	public static bool DisplayCameraLines { get; private set; } = false;
+
+	[SerializeField] private bool showCameraDebugLines;
+
 	// Start is called before the first frame update
 	void Start() {
 
@@ -18,11 +22,11 @@ public class CameraTransforms : MonoBehaviour {
 		// Get the "Player" object
 		GameObject player = GameObject.Find("Player");
 
-		// Get the "View" child object of the "Player" object
-		Camera view = player.transform.Find("Visual").Find("View").GetComponent<Camera>();
+		// Get the "CameraFollow" component of the main camera
+		CameraFollow view = Camera.main.GetComponent<CameraFollow>();
 
-		// Get the "FirstPersonView" component of the "View" object
-		FirstPersonView viewScript = view.gameObject.GetComponent<FirstPersonView>();
+		// Get the "FirstPersonView" component of the main camera
+		FirstPersonView viewScript = Camera.main.GetComponent<FirstPersonView>();
 
 		GUILayout.BeginArea(new Rect(10, 100, 300, 400));
 
@@ -48,5 +52,13 @@ public class CameraTransforms : MonoBehaviour {
 
 	private static string Format(float value) {
 		return $"{value:+0.000;-0.000}";
+	}
+
+	void ISerializationCallbackReceiver.OnAfterDeserialize() {
+		DisplayCameraLines = showCameraDebugLines;
+	}
+
+	void ISerializationCallbackReceiver.OnBeforeSerialize() {
+		// showCameraDebugLines = DisplayCameraLines;
 	}
 }

@@ -14,13 +14,19 @@ public class CameraFollow : MonoBehaviour {
 	[SerializeField] float cullingDistance = 0.7f;
 	public bool firstPerson;
 
+	[SerializeField, ReadOnly] private bool _isCloseEnoughForFirstPerson;
+	public bool FirstPersonRenderingMode {
+		get => firstPerson && _isCloseEnoughForFirstPerson;
+		private set => _isCloseEnoughForFirstPerson = value;
+	}
+
 	[Header("Transition Properties")]
 	[SerializeField] float transitionInterpolationStrength = 1;
 	[SerializeField] float transitionRotationStrength = 35;
 	
 	[Header("Camera Offsets")]
 	[SerializeField] Vector3 localLookAnchor = Vector3.up * 2;
-	[SerializeField] float distanceFromTarget = 3;
+	[SerializeField] float thirdPersonDistanceFromTarget = 3;
 	[SerializeField] float firstPersonCameraHeight = 2;
 	[SerializeField] float thirdPersonCameraHeight = 1.5f;
 	[SerializeField] float cameraShoulderStride = 1f;
@@ -38,7 +44,6 @@ public class CameraFollow : MonoBehaviour {
 	[SerializeField, ReadOnly] private bool _oldFirstPerson;
 	[SerializeField, ReadOnly] private float _cameraShoulder;
 
-	[SerializeField, ReadOnly] private Renderer[] _renderers;
 	[SerializeField, ReadOnly] private CameraFollowTargetTransformInterceptor _interceptor;
 
 	void Start() {
@@ -49,8 +54,6 @@ public class CameraFollow : MonoBehaviour {
 		if (TryGetComponent<Rigidbody>(out var body))
 			body.freezeRotation = true;
 
-		_renderers = target.GetComponentsInChildren<Renderer>();
-
 		_interceptor = GetComponent<CameraFollowTargetTransformInterceptor>();
 	}
 
@@ -60,7 +63,7 @@ public class CameraFollow : MonoBehaviour {
 		interpolationStrength = Mathf.Max(0.01f, interpolationStrength);
 		transitionInterpolationStrength = Mathf.Max(0.01f, transitionInterpolationStrength);
 		transitionRotationStrength = Mathf.Max(0.01f, transitionRotationStrength);
-		distanceFromTarget = Mathf.Max(0, distanceFromTarget);
+		thirdPersonDistanceFromTarget = Mathf.Max(0, thirdPersonDistanceFromTarget);
 	//	localLookAnchor.x = _cameraShoulder;
 	}
 
@@ -120,19 +123,11 @@ public class CameraFollow : MonoBehaviour {
 			Vector3 fpTarget = target.transform.position + Vector3.up * firstPersonCameraHeight;
 
 			if (VectorMath.DistanceSquared(_camera.transform.position, fpTarget) < cullingDistance * cullingDistance)
-				SetModelTransparency(true);
+				_isCloseEnoughForFirstPerson = true;
 			else
-				SetModelTransparency(false);
+				_isCloseEnoughForFirstPerson = false;
 		} else if (firstPerson)
-			SetModelTransparency(true);
-	}
-
-	private void SetModelTransparency(bool setTransparent) {
-		if (_renderers != null) {
-			// Set the lighting mode on each renderer to Shadows Only when transparent or On when not transparent
-			foreach (Renderer renderer in _renderers)
-				renderer.shadowCastingMode = setTransparent ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
-		}
+			_isCloseEnoughForFirstPerson = true;
 	}
 
 	private void HandleTransitionMovement() {
@@ -148,7 +143,8 @@ public class CameraFollow : MonoBehaviour {
 
 		transform.position = Vector3.Lerp(start, end, Easing.InOutCubic(_transitionTime));
 
-	//	Debug.DrawLine(start, end, Color.magenta);
+		if (CameraTransforms.DisplayCameraLines)
+			Debug.DrawLine(start, end, Color.magenta);
 	}
 
 	private void HandleFirstPersonMovement() {
@@ -174,8 +170,8 @@ public class CameraFollow : MonoBehaviour {
 		Vector3 targetPosition = GetThirdPersonTarget(instantMovement);
 		transform.position = targetPosition;
 
-	//	if (!instantMovement)
-	//		Debug.DrawLine(transform.position, targetPosition, Color.magenta);
+		if (!instantMovement && CameraTransforms.DisplayCameraLines)
+			Debug.DrawLine(transform.position, targetPosition, Color.magenta);
 	}
 
 	private void HandleThirdPersonMovement_UpdateCameraShoulder() {
@@ -221,7 +217,7 @@ public class CameraFollow : MonoBehaviour {
 		// and will look at the target with an additional Y-coordinate offset
 		Quaternion rotation = Quaternion.Euler(_view.ViewRotation);
 
-		Vector3 targetPositionRelative = rotation * Vector3.up * thirdPersonCameraHeight - rotation * Vector3.forward * distanceFromTarget;
+		Vector3 targetPositionRelative = rotation * Vector3.up * thirdPersonCameraHeight - rotation * Vector3.forward * thirdPersonDistanceFromTarget;
 
 		// Attempt to move the camera to the new position
 		Vector3 targetPosition = target.transform.position + targetPositionRelative;
@@ -325,32 +321,39 @@ public class CameraFollow : MonoBehaviour {
 			if (Physics.Raycast(ray, out var hit, 100, target.layer.ToLayerMask().Exclusion(), QueryTriggerInteraction.Ignore)) {
 				// If the hit point is closer than the look anchor, then don't rotate the player
 				if (VectorMath.DistanceSquared(target.transform.position, hit.point) >= localLookAnchor.sqrMagnitude) {
-					target.transform.rotation = RotationMath.RotationTo(target.transform.position, hit.point);
+					Quaternion rotation = RotationMath.RotationTo(target.transform.position, hit.point);
 
 					if (_interceptor != null)
-						_interceptor.AdjustTransform(target.transform);
+						_interceptor.AdjustTransform(target.transform, rotation);
+					else
+						target.transform.rotation = rotation;
 
 					rayHasHit = true;
 
 					// Draw a line from the camera to the hit point
-				//	Debug.DrawRay(ray.origin, ray.direction * 5, Color.yellow);
+					if (CameraTransforms.DisplayCameraLines)
+						Debug.DrawRay(ray.origin, ray.direction * 5, Color.yellow);
 				}
 			}
 		}
 
 		if (!rayHasHit) {
 			// Rotate the player to face the rotation of the camera
-			target.transform.rotation = Quaternion.Euler(_view.ViewRotation);
+			Quaternion rotation = Quaternion.Euler(_view.ViewRotation);
 
 			if (_interceptor != null)
-				_interceptor.AdjustTransform(target.transform);
+				_interceptor.AdjustTransform(target.transform, rotation);
+			else
+				target.transform.rotation = rotation;
 
 			// Draw a line from the camera with the view rotation
-		//	Debug.DrawRay(_camera.transform.position, _camera.transform.forward * 5, Color.red);
+			if (CameraTransforms.DisplayCameraLines)
+				Debug.DrawRay(_camera.transform.position, _camera.transform.forward * 5, Color.red);
 		}
 
 		// Draw a line from the player to the player's forward vector
-	//	Debug.DrawRay(target.transform.position + target.transform.up * 1.5f, target.transform.forward * 5, Color.blue);
+		if (CameraTransforms.DisplayCameraLines)
+			Debug.DrawRay(target.transform.position + target.transform.up * (firstPerson ? firstPersonCameraHeight : thirdPersonCameraHeight), target.transform.forward * 5, Color.blue);
 	}
 
 	private Vector3 GetLookAnchor() {
