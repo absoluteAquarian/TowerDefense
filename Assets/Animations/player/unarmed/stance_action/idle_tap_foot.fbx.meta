@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 29144c77a6afc9a4eaa9c9abce9a322c
+guid: d2d91c1fcbe2ff94381afc7fa0a524cb
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: jump_start
+      name: player_action_idle_tap_foot
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 7
+      lastFrame: 98
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

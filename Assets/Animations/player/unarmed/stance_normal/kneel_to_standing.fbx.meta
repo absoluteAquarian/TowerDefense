@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 26756398e6c3f064884a8030668dd2c7
+guid: d895204f036477c4bb052fd40e1dbac4
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: falling_land_hard
+      name: player_normal_kneel_to_standing
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 60
+      lastFrame: 42
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

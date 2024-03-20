@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: f9ed69f54197fea42be81033842fb9c8
+guid: 614b33a710ed5714dbaacfbec40baf81
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: falling_land_soft
+      name: player_kneel_loop
       takeName: mixamo.com
       internalID: -203655887218126122
-      firstFrame: 6.5
-      lastFrame: 32
+      firstFrame: 0
+      lastFrame: 140
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 30277508235904b46829234f7a737001
+guid: a2c5a77fe78d9f54d96943283c3bb7c6
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: falling_land_roll
+      name: player_walk_loop
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 54
+      lastFrame: 31
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

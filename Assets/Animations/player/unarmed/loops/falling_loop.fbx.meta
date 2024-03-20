@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: d895204f036477c4bb052fd40e1dbac4
+guid: 141d214753e2034469c0fc17657bdbeb
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: kneel_to_standing
+      name: player_falling_loop
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 42
+      lastFrame: 21
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
