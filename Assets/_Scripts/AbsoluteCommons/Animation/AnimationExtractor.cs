@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
+#if UNITY_EDITOR
 namespace AbsoluteCommons.Animation {
 	// Taken from: https://stackoverflow.com/questions/22662008/how-to-create-anim-file-from-fbx-file-in-unity
 	public class AnimationExtractor : MonoBehaviour {
@@ -25,3 +26,4 @@ namespace AbsoluteCommons.Animation {
 		}
 	}
 }
+#endif
