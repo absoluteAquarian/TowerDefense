@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 72e28bd7ccb044446b7a9d9efcb2a7f3
+guid: 2e32783724442004bac7e831ed677872
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: walk_back
+      name: player_weapon_pistol_walk_forward_loop
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 31
+      lastFrame: 24
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

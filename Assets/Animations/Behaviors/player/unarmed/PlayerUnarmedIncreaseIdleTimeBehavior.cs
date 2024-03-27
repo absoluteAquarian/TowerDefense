@@ -1,8 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+using AbsoluteCommons.Utility;
 using UnityEngine;
 
-public class PlayerUnarmedIdleResetTimeBehavior : StateMachineBehaviour {
+public class PlayerUnarmedIncreaseIdleTimeBehavior : StateMachineBehaviour {
 	// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 	//override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
 	//{
@@ -11,7 +10,8 @@ public class PlayerUnarmedIdleResetTimeBehavior : StateMachineBehaviour {
 
 	// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
 	public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-		animator.SetFloat("idleTime", 0);
+		// Increase the "idleTime" parameter of the animator
+		animator.IncrementFloat("idleTime", Time.deltaTime);
 	}
 
 	// OnStateExit is called when a transition ends and the state machine finishes evaluating this state

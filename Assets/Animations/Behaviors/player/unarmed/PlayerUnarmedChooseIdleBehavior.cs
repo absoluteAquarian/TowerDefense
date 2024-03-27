@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerUnarmedChooseIdleBehavior : StateMachineBehaviour {
@@ -11,9 +9,17 @@ public class PlayerUnarmedChooseIdleBehavior : StateMachineBehaviour {
 
 	// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
 	public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-		// Set "idleChoice" to a random number between 0 and 2
-		// This will keep happening as long as the actor is in the "Choose Idle" state, meaning no transition has been made
-		animator.SetInteger("idleChoice", Random.Range(0, 3));
+		float idleTime = animator.GetFloat("idleTime");
+
+		// If the player has been idle for more than 12 seconds, choose a new idle animation
+		if (idleTime > 12) {
+			int random = Random.Range(0, 3);
+			animator.SetInteger("idleChoice", random);
+
+			// Choice 0 is the default idle animation, which isn't a moving idle
+			if (random != 0)
+				animator.SetTrigger("playMovingIdle");
+		}
 	}
 
 	// OnStateExit is called when a transition ends and the state machine finishes evaluating this state

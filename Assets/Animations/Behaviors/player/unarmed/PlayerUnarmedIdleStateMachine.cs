@@ -4,8 +4,6 @@ using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerUnarmedIdleStateMachine : StateMachineBehaviour {
-	[DoNotSerialize] private static readonly string[] _idleStateNames = new string[] { "idle_breathing", "idle_look", "idle_tap_foot" };
-
 	[SerializeField, ReadOnly] private float turningFactor;
 	[SerializeField] private float turningSpeed = 8f;
 
@@ -20,25 +18,12 @@ public class PlayerUnarmedIdleStateMachine : StateMachineBehaviour {
 		// Get the CharacterController component of the actor
 		CharacterController controller = animator.gameObject.GetComponentInParent<CharacterController>();
 
-		// Set "hasHorizontalMovement" to true if the actor is moving horizontally
-		animator.SetBool("hasHorizontalMotion", controller.velocity.x != 0f);
-
-		// Set "hasVerticalMovement" to true if the actor is moving vertically
-		animator.SetBool("hasVerticalMotion", controller.velocity.y != 0f);
-
-		// If the actor is falling, increase "fallTime" by the time since the last frame
-		// Otherwise, reset "fallTime" to 0
-		if (controller.velocity.y < 0)
+		// If the player is moving vertically, increase the fall time
+		const float FALL_VELOCITY_EPSILON = 0.1f;
+		if (Mathf.Abs(controller.velocity.y) > FALL_VELOCITY_EPSILON)
 			animator.IncrementFloat("fallTime", Time.deltaTime);
 		else
 			animator.SetFloat("fallTime", 0);
-
-		// If the actor is in any of the idle states, increase "idleTime"
-		// Otherwise, reset "idleTime" to 0
-		if (Array.FindIndex(_idleStateNames, stateInfo.IsName) >= 0)
-			animator.IncrementFloat("idleTime", Time.deltaTime);
-		else
-			animator.SetFloat("idleTime", 0);
 
 		// Get the FirstPersonView component from the main camera and set the "turnDirection" parameter of the animator
 		FirstPersonView firstPersonView = Camera.main.GetComponent<FirstPersonView>();

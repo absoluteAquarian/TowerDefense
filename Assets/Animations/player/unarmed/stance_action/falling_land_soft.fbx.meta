@@ -36,7 +36,7 @@ ModelImporter:
       name: player_action_falling_land_soft
       takeName: mixamo.com
       internalID: -203655887218126122
-      firstFrame: 6.5
+      firstFrame: 8.2
       lastFrame: 32
       wrapMode: 0
       orientationOffsetY: 0
@@ -51,7 +51,7 @@ ModelImporter:
       loopBlendPositionXZ: 1
       keepOriginalOrientation: 1
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000

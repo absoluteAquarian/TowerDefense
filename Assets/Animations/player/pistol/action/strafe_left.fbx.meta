@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 76959a2a1287c91419a1496392339be3
+guid: 09ea7c0d79955b84badc5fe1e11acce9
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: strafe_right
+      name: player_weapon_pistol_strafe_left
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 18
+      lastFrame: 17
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

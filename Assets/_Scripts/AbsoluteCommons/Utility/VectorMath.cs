@@ -7,5 +7,10 @@ namespace AbsoluteCommons.Utility {
 		public static Vector3 DirectionTo(Vector3 from, Vector3 to) => Vector3.Normalize(to - from);
 
 		public static Vector3 DirectionFrom(Vector3 from, Vector3 to) => Vector3.Normalize(from - to);
+
+		public static void RestrictMagnitude(ref Vector3 vector, float maxMagnitude) {
+			if (vector.sqrMagnitude > maxMagnitude * maxMagnitude)
+				vector = vector.normalized * maxMagnitude;
+		}
 	}
 }

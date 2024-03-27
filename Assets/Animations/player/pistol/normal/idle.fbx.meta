@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 16ce16fefdcc31240b20a14abe1ef8b2
+guid: ac65b019d7858804bb8fbf1090cc52bf
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,11 +33,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: crouch_to_stand
+      name: player_weapon_pistol_stand_idle
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 41
+      lastFrame: 40
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
