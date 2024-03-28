@@ -15,16 +15,6 @@ public class PlayerUnarmedIdleStateMachine : StateMachineBehaviour {
 
 	// OnStateUpdate is called before OnStateUpdate is called on any state inside this state machine
 	public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-		// Get the CharacterController component of the actor
-		CharacterController controller = animator.gameObject.GetComponentInParent<CharacterController>();
-
-		// If the player is moving vertically, increase the fall time
-		const float FALL_VELOCITY_EPSILON = 0.1f;
-		if (Mathf.Abs(controller.velocity.y) > FALL_VELOCITY_EPSILON)
-			animator.IncrementFloat("fallTime", Time.deltaTime);
-		else
-			animator.SetFloat("fallTime", 0);
-
 		// Get the FirstPersonView component from the main camera and set the "turnDirection" parameter of the animator
 		FirstPersonView firstPersonView = Camera.main.GetComponent<FirstPersonView>();
 

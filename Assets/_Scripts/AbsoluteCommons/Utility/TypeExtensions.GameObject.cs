@@ -7,6 +7,7 @@ namespace AbsoluteCommons.Utility {
 			Queue<GameObject> scanQueue = new();
 			scanQueue.Enqueue(parent);
 
+			// Traverse the hierarchy
 			while (scanQueue.TryDequeue(out GameObject current)) {
 				if (current.name == name)
 					return current;
@@ -16,6 +17,20 @@ namespace AbsoluteCommons.Utility {
 			}
 
 			return null;
+		}
+
+		public static GameObject GetChild(this GameObject parent, string path) {
+			string[] pathParts = path.Split('/');
+			Transform current = parent.transform;
+
+			// Traverse the path
+			foreach (string part in pathParts) {
+				current = current.Find(part);
+				if (current == null)
+					return null;
+			}
+
+			return current.gameObject;
 		}
 	}
 }

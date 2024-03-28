@@ -22,9 +22,15 @@ public class PlayerMovement : MonoBehaviour {
 	public bool zeroVelocity = false;
 
 	private CharacterController _controller;
+	private Animator _firstPersonAnimator;
+	private Animator _thirdPersonAnimator;
 
 	private void Awake() {
 		_controller = GetComponent<CharacterController>();
+
+		// NOTE: the child paths may need to be changed if this script is used in a different project
+		_firstPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
+		_thirdPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
 	}
 
 	private void Update() {
@@ -35,12 +41,10 @@ public class PlayerMovement : MonoBehaviour {
 		if (_isGrounded && _velocity.y < 0) {
 			_velocity.y = 0;
 
-			// Set the triggers in the animators
-			foreach (Animator animator in GetComponentsInChildren<Animator>()) {
-				animator.SetBoolSafely("jumping", false);
-				if (!_oldGrounded && animator.GetFloatSafely("fallTime", defaultValue: 0) > 0)
-					animator.SetBoolSafely("landing", true);
-			}
+			// Set the triggers in the animator
+			_thirdPersonAnimator.SetBoolSafely("jumping", false);
+			if (!_oldGrounded && _thirdPersonAnimator.GetFloat("fallTime") > 0)
+				_thirdPersonAnimator.SetBoolSafely("landing", true);
 		}
 
 		// Get horizontal movement
@@ -75,33 +79,30 @@ public class PlayerMovement : MonoBehaviour {
 		_velocity.z = xzVelocity.z;
 
 		if (move.x != 0 || move.z != 0) {
-			// Set the triggers in the animators
-			foreach (Animator animator in GetComponentsInChildren<Animator>())
-				animator.SetBoolSafely("hasHorizontalMotion", true);
+			// Set the triggers in the animator
+			_thirdPersonAnimator.SetBool("hasHorizontalMotion", true);
 		} else {
-			// Set the triggers in the animators
-			foreach (Animator animator in GetComponentsInChildren<Animator>())
-				animator.SetBoolSafely("hasHorizontalMotion", false);
+			// Set the triggers in the animator
+			_thirdPersonAnimator.SetBool("hasHorizontalMotion", false);
 		}
 
 		// Handle jump
 		if (canJump && _isGrounded && Input.GetButtonDown("Jump")) {
 			_velocity.y = _jumpStrength;
 
-			// Set the triggers in the animators
-			foreach (Animator animator in GetComponentsInChildren<Animator>())
-				animator.SetBoolSafely("jumping", true);
+			// Set the triggers in the animator
+			_thirdPersonAnimator.SetBool("jumping", true);
 		}
 
 		_gravity = Physics.gravity * Time.deltaTime;
-		if (!_isGrounded && Math.Sign(_velocity.y) == Math.Sign(_gravity.y) && Mathf.Abs(_velocity.y) >= Mathf.Abs(_gravity.y)) {
-			// Set the triggers in the animators
-			foreach (Animator animator in GetComponentsInChildren<Animator>())
-				animator.IncrementFloat("fallTime", Time.deltaTime);
+
+		// Player is "falling" if the dot product of the velocity and gravity is positive (vectors are in the same direction)
+		if (!_isGrounded && Vector3.Dot(_velocity, _gravity) > 0) {
+			// Set the triggers in the animator
+			_thirdPersonAnimator.IncrementFloat("fallTime", Time.deltaTime);
 		} else {
-			// Set the triggers in the animators
-			foreach (Animator animator in GetComponentsInChildren<Animator>())
-				animator.SetFloatSafely("fallTime", 0);
+			// Set the triggers in the animator
+			_thirdPersonAnimator.SetFloat("fallTime", 0);
 		}
 
 		// Apply gravity
@@ -110,8 +111,8 @@ public class PlayerMovement : MonoBehaviour {
 		if (_velocity.y > _maxFallVelocity) {
 			_velocity.y = _maxFallVelocity;
 
-			foreach (Animator animator in GetComponentsInChildren<Animator>())
-				animator.SetBoolSafely("longFall", true);
+			// Set the triggers in the animator
+			_thirdPersonAnimator.SetBool("longFall", true);
 		}
 
 		// Move the player
