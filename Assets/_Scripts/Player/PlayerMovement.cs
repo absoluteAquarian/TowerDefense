@@ -29,8 +29,8 @@ public class PlayerMovement : MonoBehaviour {
 		_controller = GetComponent<CharacterController>();
 
 		// NOTE: the child paths may need to be changed if this script is used in a different project
-		_firstPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
-		_thirdPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
+		_firstPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
+		_thirdPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
 	}
 
 	private void Update() {
@@ -48,15 +48,13 @@ public class PlayerMovement : MonoBehaviour {
 		}
 
 		// Get horizontal movement
-		Vector3 move;
 		if (!zeroVelocity) {
-			move = canMoveHorizontally ? new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")) : Vector3.zero;
+			Vector3 move = canMoveHorizontally ? new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")) : Vector3.zero;
 			move = transform.TransformDirection(move);
 			move *= _acceleration * Time.deltaTime;
 
 			_velocity += move;
 		} else {
-			move = Vector3.zero;
 			_velocity.x = 0;
 			_velocity.z = 0;
 			zeroVelocity = false;
@@ -77,14 +75,6 @@ public class PlayerMovement : MonoBehaviour {
 		VectorMath.RestrictMagnitude(ref xzVelocity, _maxVelocity);
 		_velocity.x = xzVelocity.x;
 		_velocity.z = xzVelocity.z;
-
-		if (move.x != 0 || move.z != 0) {
-			// Set the triggers in the animator
-			_thirdPersonAnimator.SetBool("hasHorizontalMotion", true);
-		} else {
-			// Set the triggers in the animator
-			_thirdPersonAnimator.SetBool("hasHorizontalMotion", false);
-		}
 
 		// Handle jump
 		if (canJump && _isGrounded && Input.GetButtonDown("Jump")) {
