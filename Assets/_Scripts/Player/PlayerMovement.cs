@@ -6,15 +6,21 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour {
 	[SerializeField, ReadOnly] private Vector3 _velocity;
+	[SerializeField, ReadOnly] private float _velocityMagnitude;
 	[SerializeField, ReadOnly] private bool _isGrounded;
 	private bool _oldGrounded;
 	[SerializeField, ReadOnly] private CollisionFlags _collisionFlags;
 	[SerializeField, ReadOnly] private Vector3 _gravity;
+	private Vector3 _oldGravity;
+	private bool _hasOldGravity;
 	[SerializeField] private float _jumpStrength = 6.8f;
-	[SerializeField] private float _maxVelocity = 4f;
+	[SerializeField] private float _maxVelocity = 5.5f;
+	[SerializeField] private float _sprintingMaxVelocity = 11f;
 	[SerializeField] private float _maxFallVelocity = 25f;
-	[SerializeField] private float _acceleration = 42f;
-	[SerializeField] private float _friction = 2.75f;
+	[SerializeField] private float _acceleration = 115f;
+	[SerializeField] private float _sprintingAcceleration = 250f;
+	[SerializeField] private float _friction = 13f;
+	[SerializeField] private float _airFriction = 7f;
 
 	[Header("Controls")]
 	public bool canJump = true;
@@ -47,13 +53,23 @@ public class PlayerMovement : MonoBehaviour {
 				_thirdPersonAnimator.SetBoolSafely("landing", true);
 		}
 
+		// Handle sprinting
+		bool sprinting = Input.GetButton("Sprint");
+		_thirdPersonAnimator.SetBool("sprinting", sprinting);
+
+		// Get a rotation to be applied to directions
+		Vector3 euler = new Vector3(0, Camera.main.transform.eulerAngles.y, 0);
+		Quaternion movementRotation = Quaternion.Euler(euler);
+
 		// Get horizontal movement
 		if (!zeroVelocity) {
-			Vector3 move = canMoveHorizontally ? new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")) : Vector3.zero;
-			move = transform.TransformDirection(move);
-			move *= _acceleration * Time.deltaTime;
+			if (canMoveHorizontally) {
+				Vector3 move = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+				move = movementRotation * move;
+				move *= (sprinting ? _sprintingAcceleration : _acceleration) * Time.deltaTime;
 
-			_velocity += move;
+				_velocity += move;
+			}
 		} else {
 			_velocity.x = 0;
 			_velocity.z = 0;
@@ -61,20 +77,30 @@ public class PlayerMovement : MonoBehaviour {
 		}
 
 		// Apply friction
-		if (_isGrounded) {
-			Vector3 friction = _friction * Time.deltaTime * new Vector3(_velocity.x, 0, _velocity.z);
-			_velocity -= friction;
+		float frictionForce = (_isGrounded ? _friction : _airFriction) * Time.deltaTime;
+		Vector2 friction = frictionForce * _velocity.GetXZ();
+		_velocity -= friction.ToXZ();
 
-			if (Mathf.Abs(_velocity.x) < 0.1f)
-				_velocity.x = 0;
-			if (Mathf.Abs(_velocity.z) < 0.1f)
-				_velocity.z = 0;
-		}
+		float min = Mathf.Max(frictionForce, 0.1f);
+		if (Mathf.Abs(_velocity.x) < min)
+			_velocity.x = 0;
+		if (Mathf.Abs(_velocity.z) < min)
+			_velocity.z = 0;
 
-		Vector3 xzVelocity = new Vector3(_velocity.x, 0, _velocity.z);
-		VectorMath.RestrictMagnitude(ref xzVelocity, _maxVelocity);
+		Vector2 xzVelocity = _velocity.GetXZ();
+		VectorMath.RestrictMagnitude(ref xzVelocity, sprinting ? _sprintingMaxVelocity : _maxVelocity);
 		_velocity.x = xzVelocity.x;
-		_velocity.z = xzVelocity.z;
+		_velocity.z = xzVelocity.y;
+
+		Vector2 horizontalVelocity = _velocity.GetXZ();
+		_velocityMagnitude = horizontalVelocity.magnitude;
+
+		_thirdPersonAnimator.SetBool("hasHorizontalMovement", _velocityMagnitude > 0.1f);
+
+		Vector2 unitHorizontal = horizontalVelocity.normalized;
+
+		_thirdPersonAnimator.SetFloat("forwardVelocity", Vector2.Dot(unitHorizontal, (movementRotation * Vector3.forward).GetXZ()));
+		_thirdPersonAnimator.SetFloat("strafeVelocity", Vector2.Dot(unitHorizontal, (movementRotation * Vector3.right).GetXZ()));
 
 		// Handle jump
 		if (canJump && _isGrounded && Input.GetButtonDown("Jump")) {
@@ -87,7 +113,8 @@ public class PlayerMovement : MonoBehaviour {
 		_gravity = Physics.gravity * Time.deltaTime;
 
 		// Player is "falling" if the dot product of the velocity and gravity is positive (vectors are in the same direction)
-		if (!_isGrounded && Vector3.Dot(_velocity, _gravity) > 0) {
+		Vector3 projection = Vector3.Project(_velocity, _gravity.normalized);
+		if (!_isGrounded && Vector3.Dot(projection, _gravity) > 0 && (!_hasOldGravity || projection.sqrMagnitude > _oldGravity.sqrMagnitude)) {
 			// Set the triggers in the animator
 			_thirdPersonAnimator.IncrementFloat("fallTime", Time.deltaTime);
 		} else {
@@ -97,9 +124,11 @@ public class PlayerMovement : MonoBehaviour {
 
 		// Apply gravity
 		_velocity += _gravity;
+		_oldGravity = _gravity;
+		_hasOldGravity = true;
 
-		if (_velocity.y > _maxFallVelocity) {
-			_velocity.y = _maxFallVelocity;
+		if (_velocity.y < -_maxFallVelocity) {
+			_velocity.y = -_maxFallVelocity;
 
 			// Set the triggers in the animator
 			_thirdPersonAnimator.SetBool("longFall", true);

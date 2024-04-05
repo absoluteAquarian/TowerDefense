@@ -1,6 +1,10 @@
+using AbsoluteCommons.Utility;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class GradualLayerResetBehavior : StateMachineBehaviour {
+	public EasingMode easingMode = EasingMode.Linear;
+
 	// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 	//override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
 	//{
@@ -9,9 +13,9 @@ public class GradualLayerResetBehavior : StateMachineBehaviour {
 
 	// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
 	public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-		animator.SetLayerWeight(layerIndex, 1f - stateInfo.normalizedTime);
+		animator.SetLayerWeight(layerIndex, 1f - EasingExtensions.Ease(easingMode, stateInfo.normalizedTime));
 
-		Debug.Log("Layer " + layerIndex + " weight: " + animator.GetLayerWeight(layerIndex));
+	//	Debug.Log("Layer " + layerIndex + " weight: " + animator.GetLayerWeight(layerIndex));
 	}
 
 	// OnStateExit is called when a transition ends and the state machine finishes evaluating this state

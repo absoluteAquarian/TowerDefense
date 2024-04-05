@@ -1499,14 +1499,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _velocity: {x: 0, y: 0, z: 0}
+  _velocityMagnitude: 0
   _isGrounded: 0
   _collisionFlags: 0
   _gravity: {x: 0, y: 0, z: 0}
   _jumpStrength: 6.8
-  _maxVelocity: 4
+  _maxVelocity: 5.5
+  _sprintingMaxVelocity: 11
   _maxFallVelocity: 25
-  _acceleration: 42
-  _friction: 2.75
+  _acceleration: 115
+  _sprintingAcceleration: 250
+  _friction: 13
+  _airFriction: 7
   canJump: 1
   canMoveHorizontally: 1
   zeroVelocity: 0

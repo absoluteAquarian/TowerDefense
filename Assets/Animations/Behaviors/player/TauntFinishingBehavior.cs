@@ -1,12 +1,8 @@
-using AbsoluteCommons.Utility;
-using System;
-using Unity.VisualScripting;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerUnarmedIdleStateMachine : StateMachineBehaviour {
-	[SerializeField, ReadOnly] private float turningFactor;
-	[SerializeField] private float turningSpeed = 8f;
-
+public class TauntFinishingBehavior : StateMachineBehaviour {
 	// OnStateEnter is called before OnStateEnter is called on any state inside this state machine
 	//override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
 	//{
@@ -14,29 +10,10 @@ public class PlayerUnarmedIdleStateMachine : StateMachineBehaviour {
 	//}
 
 	// OnStateUpdate is called before OnStateUpdate is called on any state inside this state machine
-	public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-		// Get the FirstPersonView component from the main camera and set the "turnDirection" parameter of the animator
-		FirstPersonView firstPersonView = Camera.main.GetComponent<FirstPersonView>();
-
-		int direction = firstPersonView.RotationDirection.Horizontal;
-		int factorSign = Math.Sign(turningFactor);
-		if (direction == 0)
-			direction = -factorSign;
-
-		if (direction != 0) {
-			float step = Time.deltaTime * turningSpeed;
-
-			// If the factor would step over 0, then set it to 0
-			if (turningFactor != 0 && Math.Sign(turningFactor + step) != factorSign)
-				turningFactor = 0;
-			else
-				turningFactor += step * direction;
-
-			turningFactor = Mathf.Clamp(turningFactor, -1, 1);
-		}
-
-		animator.SetInteger("turnDirection", Math.Sign(turningFactor));
-	}
+	//override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+	//{
+	//    
+	//}
 
 	// OnStateExit is called before OnStateExit is called on any state inside this state machine
 	//override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
@@ -63,8 +40,7 @@ public class PlayerUnarmedIdleStateMachine : StateMachineBehaviour {
 	//}
 
 	// OnStateMachineExit is called when exiting a state machine via its Exit Node
-	//override public void OnStateMachineExit(Animator animator, int stateMachinePathHash)
-	//{
-	//    
-	//}
+	public override void OnStateMachineExit(Animator animator, int stateMachinePathHash) {
+		animator.ResetTrigger("taunting");
+	}
 }
