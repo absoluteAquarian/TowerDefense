@@ -2,7 +2,6 @@
 using UnityEngine;
 
 [AddComponentMenu("Player/Player Weapon Info")]
-[RequireComponent(typeof(Animator))]
 public class PlayerWeaponInfo : MonoBehaviour {
 	public enum WeaponType {
 		None,

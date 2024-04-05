@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-internal class PlayerModelRotationLockBehavior : StateMachineBehaviour {
+public class PlayerModelRotationLockBehavior : StateMachineBehaviour {
 	// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 	public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 		// Get the "CameraFollowTargetTransformInterceptor" component of the camera
