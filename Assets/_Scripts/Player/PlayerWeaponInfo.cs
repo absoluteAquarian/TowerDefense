@@ -38,7 +38,7 @@ namespace TowerDefense.Player {
 		[Header("IK Properties")]
 		[SerializeField, ReadOnly] private GameObject _weaponObject;
 		[SerializeField, ReadOnly] private GameObject _leftHandIKTarget;
-		[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
+	//	[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
 
 		private void Awake() {
 			// NOTE: the child paths may need to be changed if this script is used in a different project
@@ -225,7 +225,7 @@ namespace TowerDefense.Player {
 
 			TypeExtensions.DestroyAndSetNull(ref _weaponObject);
 			TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
-			TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
+		//	TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
 
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetBool("weaponDeployed", false);
@@ -243,6 +243,7 @@ namespace TowerDefense.Player {
 			if (animator) {
 				// IK should only be active when weapon is fully deployed; the other states either have a transition animation or no weapon
 				if (_deployState == DeployState.Deployed) {
+					/*
 					// Set the right hand target position and rotation, if one has been assigned
 					if (_rightHandIKTarget) {
 						animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1.0f);
@@ -250,6 +251,7 @@ namespace TowerDefense.Player {
 						animator.SetIKPosition(AvatarIKGoal.RightHand, _rightHandIKTarget.transform.position);
 						animator.SetIKRotation(AvatarIKGoal.RightHand, _rightHandIKTarget.transform.rotation);
 					}
+					*/
 
 					// Set the left hand target position and rotation, if one has been assigned
 					if (_leftHandIKTarget) {
@@ -259,9 +261,11 @@ namespace TowerDefense.Player {
 						animator.SetIKRotation(AvatarIKGoal.LeftHand, _leftHandIKTarget.transform.rotation);
 					}
 				} else {
+					/*
 					// Reset the right hand target position and rotation
 					animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 0.0f);
 					animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0.0f);
+					*/
 
 					// Reset the left hand target position and rotation
 					animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
