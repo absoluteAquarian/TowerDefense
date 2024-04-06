@@ -1565,7 +1565,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41c8052af37c8c9458c96e688e1f26e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _currentWeapon: 0
+  database: {fileID: 11400000, guid: 7c4bd395469524244ae1d082b633fa57, type: 2}
+  _currentWeapon: 1
   _displayedWeapon: 0
   _playWeaponAnimation: 0
   _deployState: 0
