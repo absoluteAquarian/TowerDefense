@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ac65b019d7858804bb8fbf1090cc52bf
+guid: 709b62ba9c80d164cb813207aade563e
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -33,22 +33,22 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: player_weapon_pistol_stand_idle
+      name: player_weapon_pistol_stand_idle_normal
       takeName: mixamo.com
       internalID: -203655887218126122
       firstFrame: 0
-      lastFrame: 40
+      lastFrame: 120
       wrapMode: 0
-      orientationOffsetY: -45
+      orientationOffsetY: 0
       level: 0
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 1
       loopBlend: 0
-      loopBlendOrientation: 1
-      loopBlendPositionY: 1
-      loopBlendPositionXZ: 1
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
       keepOriginalPositionXZ: 0
@@ -59,7 +59,7 @@ ModelImporter:
       events: []
       transformMask: []
       maskType: 3
-      maskSource: {fileID: 31900000, guid: 0931da40984123145989a7429e89eec5, type: 2}
+      maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     isReadable: 0
   meshes:

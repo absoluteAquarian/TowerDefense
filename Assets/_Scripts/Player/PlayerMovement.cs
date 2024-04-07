@@ -1,4 +1,5 @@
 ﻿using AbsoluteCommons.Attributes;
+using AbsoluteCommons.Physics;
 using AbsoluteCommons.Utility;
 using System;
 using UnityEngine;
@@ -42,7 +43,6 @@ namespace TowerDefense.Player {
 		}
 
 		private void Update() {
-			// Handle jump force
 			_isGrounded = _controller.isGrounded;
 
 			// Handle grounded interaction
@@ -51,7 +51,7 @@ namespace TowerDefense.Player {
 
 				// Set the triggers in the animator
 				_thirdPersonAnimator.SetBoolSafely("jumping", false);
-				if (!_oldGrounded && _thirdPersonAnimator.GetFloat("fallTime") > 0)
+				if (!_oldGrounded && _thirdPersonAnimator.GetBool("falling"))
 					_thirdPersonAnimator.SetBoolSafely("landing", true);
 			}
 
@@ -61,7 +61,8 @@ namespace TowerDefense.Player {
 
 			// Get a rotation to be applied to directions
 			Vector3 euler = new Vector3(0, Camera.main.transform.eulerAngles.y, 0);
-			Quaternion movementRotation = Quaternion.Euler(euler);
+			Vector3 forward = Quaternion.Euler(euler) * Vector3.forward;
+			Quaternion movementRotation = ArbitraryGravity.GetRotation(_gravity, forward);
 
 			// Get horizontal movement
 			if (!zeroVelocity) {
@@ -80,58 +81,59 @@ namespace TowerDefense.Player {
 
 			// Apply friction
 			float frictionForce = (_isGrounded ? _friction : _airFriction) * Time.deltaTime;
-			Vector2 friction = frictionForce * _velocity.GetXZ();
-			_velocity -= friction.ToXZ();
+			Vector3 planar = _velocity.PerpendicularTo(_gravity);
 
-			float min = Mathf.Max(frictionForce, 0.1f);
-			if (Mathf.Abs(_velocity.x) < min)
-				_velocity.x = 0;
-			if (Mathf.Abs(_velocity.z) < min)
-				_velocity.z = 0;
+			_velocity -= frictionForce * planar;
 
-			Vector2 xzVelocity = _velocity.GetXZ();
-			VectorMath.RestrictMagnitude(ref xzVelocity, sprinting ? _sprintingMaxVelocity : _maxVelocity);
-			_velocity.x = xzVelocity.x;
-			_velocity.z = xzVelocity.y;
+			_velocity = _velocity.WithPerpendicularSpeedCap(_gravity, 
+				minVelocity: Mathf.Max(frictionForce, 0.1f),
+				maxVelocity: sprinting ? _sprintingMaxVelocity : _maxVelocity);
 
-			Vector2 horizontalVelocity = _velocity.GetXZ();
+			Vector3 horizontalVelocity = _velocity.PerpendicularTo(_gravity);
 			_velocityMagnitude = horizontalVelocity.magnitude;
 
 			_thirdPersonAnimator.SetBool("hasHorizontalMovement", _velocityMagnitude > 0.1f);
 
-			Vector2 unitHorizontal = horizontalVelocity.normalized;
+			Vector3 unitHorizontal = horizontalVelocity.normalized;
 
 			_thirdPersonAnimator.SetFloat("forwardVelocity", Vector2.Dot(unitHorizontal, (movementRotation * Vector3.forward).GetXZ()));
 			_thirdPersonAnimator.SetFloat("strafeVelocity", Vector2.Dot(unitHorizontal, (movementRotation * Vector3.right).GetXZ()));
 
+			bool canTaunt = _isGrounded && !_thirdPersonAnimator.GetBool("landing");
+
 			// Handle jump
 			if (canJump && _isGrounded && Input.GetButtonDown("Jump")) {
-				_velocity.y = _jumpStrength;
+				_velocity += _jumpStrength * ArbitraryGravity.Up(_gravity);
 
 				// Set the triggers in the animator
 				_thirdPersonAnimator.SetBool("jumping", true);
+
+				canTaunt = false;
 			}
 
 			_gravity = Physics.gravity * Time.deltaTime;
 
 			// Player is "falling" if the dot product of the velocity and gravity is positive (vectors are in the same direction)
-			Vector3 projection = Vector3.Project(_velocity, _gravity.normalized);
-			if (!_isGrounded && Vector3.Dot(projection, _gravity) > 0 && (!_hasOldGravity || projection.sqrMagnitude > _oldGravity.sqrMagnitude)) {
+			Vector3 projection = _velocity.ParallelTo(_gravity);
+			if (!_isGrounded && _velocity.IsFallingToward(_gravity) && (!_hasOldGravity || projection.sqrMagnitude > _oldGravity.sqrMagnitude)) {
 				// Set the triggers in the animator
-				_thirdPersonAnimator.IncrementFloat("fallTime", Time.deltaTime);
+				_thirdPersonAnimator.SetBool("falling", true);
+
+				canTaunt = false;
 			} else {
 				// Set the triggers in the animator
-				_thirdPersonAnimator.SetFloat("fallTime", 0);
+				_thirdPersonAnimator.SetBool("falling", false);
 			}
+
+			_firstPersonAnimator.SetBool("canTaunt", canTaunt);
+			_thirdPersonAnimator.SetBool("canTaunt", canTaunt);
 
 			// Apply gravity
 			_velocity += _gravity;
 			_oldGravity = _gravity;
 			_hasOldGravity = true;
 
-			if (_velocity.y < -_maxFallVelocity) {
-				_velocity.y = -_maxFallVelocity;
-
+			if (ArbitraryGravity.RestrictTerminalVelocity(ref _velocity, _gravity, _maxFallVelocity)) {
 				// Set the triggers in the animator
 				_thirdPersonAnimator.SetBool("longFall", true);
 			}

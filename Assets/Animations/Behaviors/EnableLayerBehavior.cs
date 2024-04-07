@@ -11,10 +11,10 @@ namespace TowerDefense.Animations.Behaviors {
 		}
 
 		// OnStateUpdate is called before OnStateUpdate is called on any state inside this state machine
-		//override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-		//{
-		//    
-		//}
+		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
+			// Enable the layer by setting the weight to 1
+			animator.SetLayerWeight(layerIndex, 1);
+		}
 
 		// OnStateExit is called before OnStateExit is called on any state inside this state machine
 		//override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)

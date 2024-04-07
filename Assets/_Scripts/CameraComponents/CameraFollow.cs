@@ -326,7 +326,7 @@ namespace TowerDefense.CameraComponents {
 		
 				// If the ray hits any object, rotate the player to face the hit point
 				// The current object should not be included in the raycast
-				if (Physics.Raycast(ray, out var hit, 100, target.layer.ToLayerMask().Exclusion(), QueryTriggerInteraction.Ignore)) {
+				if (CheckCameraRaycast(out var hit)) {
 					// If the hit point is closer than the look anchor, then don't rotate the player
 					if (VectorMath.DistanceSquared(target.transform.position, hit.point) >= localLookAnchor.sqrMagnitude) {
 						Quaternion rotation = RotationMath.RotationTo(target.transform.position, hit.point);
@@ -362,6 +362,11 @@ namespace TowerDefense.CameraComponents {
 			// Draw a line from the player to the player's forward vector
 			if (CameraTransforms.DisplayCameraLines)
 				Debug.DrawRay(target.transform.position + target.transform.up * (firstPerson ? firstPersonCameraHeight : thirdPersonCameraHeight), target.transform.forward * 5, Color.blue);
+		}
+
+		public bool CheckCameraRaycast(out RaycastHit hit, float distance = 100) {
+			Ray ray = new Ray(_camera.transform.position, Quaternion.Euler(_view.ViewRotation) * Vector3.forward);
+			return Physics.Raycast(ray, out hit, distance, target.layer.ToLayerMask().Exclusion(), QueryTriggerInteraction.Ignore);
 		}
 
 		private Vector3 GetLookAnchor() {

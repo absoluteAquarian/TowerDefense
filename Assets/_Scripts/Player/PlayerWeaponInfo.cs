@@ -1,5 +1,6 @@
 ﻿using AbsoluteCommons.Attributes;
 using AbsoluteCommons.Utility;
+using TowerDefense.CameraComponents;
 using TowerDefense.Weapons;
 using UnityEngine;
 
@@ -35,15 +36,22 @@ namespace TowerDefense.Player {
 		private Animator _firstPersonAnimator;
 		private Animator _thirdPersonAnimator;
 
+		private CameraFollow _camera;
+
 		[Header("IK Properties")]
 		[SerializeField, ReadOnly] private GameObject _weaponObject;
 		[SerializeField, ReadOnly] private GameObject _leftHandIKTarget;
 	//	[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
+		[SerializeField, ReadOnly] private GameObject _firstPersonWeaponObject;
+		[SerializeField, ReadOnly] private GameObject _firstPersonLeftHandIKTarget;
+	//	[SerializeField, ReadOnly] private GameObject _firstPersonRightHandIKTarget;
 
 		private void Awake() {
 			// NOTE: the child paths may need to be changed if this script is used in a different project
 			_firstPersonAnimator = gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
 			_thirdPersonAnimator = gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
+
+			_camera = Camera.main.GetComponent<CameraFollow>();
 		}
 
 		private void Start() {
@@ -61,6 +69,12 @@ namespace TowerDefense.Player {
 				DeployWeapon();
 			else if (Input.GetButtonDown("Holster Weapon"))
 				HolsterWeapon();
+
+			if (_firstPersonAnimator)
+				_firstPersonAnimator.SetInteger("weaponState", (int)_deployState);
+
+			if (_thirdPersonAnimator)
+				_thirdPersonAnimator.SetInteger("weaponState", (int)_deployState);
 		}
 
 		public void SetWeapon(WeaponType weapon) {
@@ -163,15 +177,6 @@ namespace TowerDefense.Player {
 				if (_transitionTime >= 1.0f) {
 					_transitionTime = 1.0f;
 					_playWeaponAnimation = false;
-
-					switch (_deployState) {
-						case DeployState.Deploying:
-							_deployState = DeployState.Deployed;
-							break;
-						case DeployState.Holstering:
-							_deployState = DeployState.Holstered;
-							break;
-					}
 				}
 
 				CheckWeaponVisibility(oldTime, _transitionTime);
@@ -202,6 +207,8 @@ namespace TowerDefense.Player {
 			if (_displayedWeapon == WeaponType.None)
 				return;
 
+			_deployState = DeployState.Deployed;
+
 			_weaponObject = database.InstantiateWeapon(_displayedWeapon);
 			Weapon info = _weaponObject.GetComponent<Weapon>();
 			if (info) {
@@ -213,6 +220,17 @@ namespace TowerDefense.Player {
 				_leftHandIKTarget = info.leftHandBone;
 			}
 
+			_firstPersonWeaponObject = database.InstantiateWeapon(_displayedWeapon);
+			info = _firstPersonWeaponObject.GetComponent<Weapon>();
+			if (info) {
+				// Attach the weapon to the right hand bone
+				Transform rightHand = _firstPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
+				info.rightHandBone.transform.SetParent(rightHand, false);
+
+				// The player is right-handed, so only the left hand needs to be set up for IK
+				_firstPersonLeftHandIKTarget = info.leftHandBone;
+			}
+
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetBool("weaponDeployed", true);
 
@@ -222,10 +240,14 @@ namespace TowerDefense.Player {
 
 		private void DestroyWeaponObject() {
 			_displayedWeapon = WeaponType.None;
+			_deployState = DeployState.Holstered;
 
 			TypeExtensions.DestroyAndSetNull(ref _weaponObject);
 			TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
 		//	TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
+			TypeExtensions.DestroyAndSetNull(ref _firstPersonWeaponObject);
+			TypeExtensions.DestroyAndSetNull(ref _firstPersonLeftHandIKTarget);
+		//	TypeExtensions.DestroyAndSetNull(ref _firstPersonRightHandIKTarget);
 
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetBool("weaponDeployed", false);
@@ -235,30 +257,30 @@ namespace TowerDefense.Player {
 		}
 
 		private void OnAnimatorIK(int layerIndex) {
-			HandleIK(_firstPersonAnimator);
-			HandleIK(_thirdPersonAnimator);
+			HandleIK(_firstPersonAnimator, _firstPersonLeftHandIKTarget, null);
+			HandleIK(_thirdPersonAnimator, _leftHandIKTarget, null);
 		}
 
-		private void HandleIK(Animator animator) {
+		private void HandleIK(Animator animator, GameObject leftHandTarget, GameObject rightHandTarget) {
 			if (animator) {
 				// IK should only be active when weapon is fully deployed; the other states either have a transition animation or no weapon
 				if (_deployState == DeployState.Deployed) {
 					/*
 					// Set the right hand target position and rotation, if one has been assigned
-					if (_rightHandIKTarget) {
+					if (rightHandTarget) {
 						animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1.0f);
 						animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 1.0f);
-						animator.SetIKPosition(AvatarIKGoal.RightHand, _rightHandIKTarget.transform.position);
-						animator.SetIKRotation(AvatarIKGoal.RightHand, _rightHandIKTarget.transform.rotation);
+						animator.SetIKPosition(AvatarIKGoal.RightHand, rightHandTarget.transform.position);
+						animator.SetIKRotation(AvatarIKGoal.RightHand, rightHandTarget.transform.rotation);
 					}
 					*/
 
 					// Set the left hand target position and rotation, if one has been assigned
-					if (_leftHandIKTarget) {
+					if (leftHandTarget) {
 						animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1.0f);
 						animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 1.0f);
-						animator.SetIKPosition(AvatarIKGoal.LeftHand, _leftHandIKTarget.transform.position);
-						animator.SetIKRotation(AvatarIKGoal.LeftHand, _leftHandIKTarget.transform.rotation);
+						animator.SetIKPosition(AvatarIKGoal.LeftHand, leftHandTarget.transform.position);
+						animator.SetIKRotation(AvatarIKGoal.LeftHand, leftHandTarget.transform.rotation);
 					}
 				} else {
 					/*
@@ -271,6 +293,19 @@ namespace TowerDefense.Player {
 					animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
 					animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0.0f);
 				}
+			}
+		}
+
+		private void OnAnimatorMove() {
+			// Rotate the head to look at where the camera is pointing
+			if (_thirdPersonAnimator) {
+				_thirdPersonAnimator.SetLookAtWeight(1.0f);
+
+				const float DISTANCE = 100f;
+				if (_camera.CheckCameraRaycast(out RaycastHit hit, DISTANCE))
+					_thirdPersonAnimator.SetLookAtPosition(hit.point);
+				else
+					_thirdPersonAnimator.SetLookAtPosition(_camera.transform.position + _camera.transform.forward * DISTANCE);
 			}
 		}
 	}
