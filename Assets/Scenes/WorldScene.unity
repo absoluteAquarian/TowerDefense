@@ -1575,7 +1575,8 @@ MonoBehaviour:
   _holsterHideTime: 0.8
   _weaponObject: {fileID: 0}
   _leftHandIKTarget: {fileID: 0}
-  _rightHandIKTarget: {fileID: 0}
+  _firstPersonWeaponObject: {fileID: 0}
+  _firstPersonLeftHandIKTarget: {fileID: 0}
 --- !u!1001 &1341535794589777772
 PrefabInstance:
   m_ObjectHideFlags: 0

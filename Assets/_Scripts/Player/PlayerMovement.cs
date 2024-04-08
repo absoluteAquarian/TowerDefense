@@ -1,5 +1,5 @@
 ﻿using AbsoluteCommons.Attributes;
-using AbsoluteCommons.Physics;
+using AbsoluteCommons.PhysicsMath;
 using AbsoluteCommons.Utility;
 using System;
 using UnityEngine;
@@ -85,9 +85,9 @@ namespace TowerDefense.Player {
 
 			_velocity -= frictionForce * planar;
 
-			_velocity = _velocity.WithPerpendicularSpeedCap(_gravity, 
-				minVelocity: Mathf.Max(frictionForce, 0.1f),
-				maxVelocity: sprinting ? _sprintingMaxVelocity : _maxVelocity);
+			_velocity = _velocity
+				.WithPerpendicularDeadZone(_gravity, 0.1f)
+				.WithPerpendicularSpeedCap(_gravity, sprinting ? _sprintingMaxVelocity : _maxVelocity);
 
 			Vector3 horizontalVelocity = _velocity.PerpendicularTo(_gravity);
 			_velocityMagnitude = horizontalVelocity.magnitude;
@@ -96,8 +96,8 @@ namespace TowerDefense.Player {
 
 			Vector3 unitHorizontal = horizontalVelocity.normalized;
 
-			_thirdPersonAnimator.SetFloat("forwardVelocity", Vector2.Dot(unitHorizontal, (movementRotation * Vector3.forward).GetXZ()));
-			_thirdPersonAnimator.SetFloat("strafeVelocity", Vector2.Dot(unitHorizontal, (movementRotation * Vector3.right).GetXZ()));
+			_thirdPersonAnimator.SetFloat("forwardVelocity", Vector3.Dot(unitHorizontal, movementRotation * Vector3.forward));
+			_thirdPersonAnimator.SetFloat("strafeVelocity", Vector3.Dot(unitHorizontal, movementRotation * Vector3.right));
 
 			bool canTaunt = _isGrounded && !_thirdPersonAnimator.GetBool("landing");
 

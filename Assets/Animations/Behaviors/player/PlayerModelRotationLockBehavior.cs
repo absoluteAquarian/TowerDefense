@@ -1,15 +1,15 @@
 ﻿using TowerDefense.CameraComponents;
+using TowerDefense.Player;
 using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player {
 	public class PlayerModelRotationLockBehavior : StateMachineBehaviour {
 		// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 		public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-			// Get the "CameraFollowTargetTransformInterceptor" component of the camera
-			CameraFollowTargetTransformInterceptor interceptor = Camera.main.GetComponent<CameraFollowTargetTransformInterceptor>();
-
-			// Lock the rotation of the "Player" object
-			interceptor.Lock();
+			Camera.main.GetComponent<CameraFollowTargetTransformInterceptor>().Lock();
+			ThirdPersonModelRotation modelRotation = animator.GetComponent<ThirdPersonModelRotation>();
+			if (modelRotation)
+				modelRotation.ForcedLock = true;
 		}
 
 		// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
@@ -20,11 +20,10 @@ namespace TowerDefense.Animations.Behaviors.Player {
 
 		// OnStateExit is called when a transition ends and the state machine finishes evaluating this state
 		public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
-			// Get the "CameraFollowTargetTransformInterceptor" component of the camera
-			CameraFollowTargetTransformInterceptor interceptor = Camera.main.GetComponent<CameraFollowTargetTransformInterceptor>();
-
-			// Unlock the rotation of the "Player" object
-			interceptor.Unlock(lerping: true);
+			Camera.main.GetComponent<CameraFollowTargetTransformInterceptor>().Unlock(lerping: true);
+			ThirdPersonModelRotation modelRotation = animator.GetComponent<ThirdPersonModelRotation>();
+			if (modelRotation)
+				modelRotation.ForcedLock = false;
 		}
 
 		// OnStateMove is called right after Animator.OnAnimatorMove()

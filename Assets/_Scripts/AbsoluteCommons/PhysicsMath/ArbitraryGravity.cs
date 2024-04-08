@@ -1,7 +1,7 @@
 ﻿using AbsoluteCommons.Utility;
 using UnityEngine;
 
-namespace AbsoluteCommons.Physics {
+namespace AbsoluteCommons.PhysicsMath {
 	public static class ArbitraryGravity {
 		/// <summary>
 		/// Gets the up vector with respect to the gravity vector.
@@ -43,18 +43,27 @@ namespace AbsoluteCommons.Physics {
 		/// </summary>
 		public static Vector3 PerpendicularTo(this Vector3 velocity, Vector3 gravity) => Vector3.ProjectOnPlane(velocity, gravity);
 
+		public static Vector3 WithPerpendicularDeadZone(this Vector3 velocity, Vector3 gravity, float deadZone) {
+			Vector3 perpendicular = velocity.PerpendicularTo(gravity);
+
+			if (perpendicular.sqrMagnitude <= deadZone * deadZone)
+				return velocity.ParallelTo(gravity);
+
+			return velocity;
+		}
+
 		/// <summary>
 		/// Restricts the velocity vector to a maximum magnitude perpendicular to the gravity vector.
 		/// </summary>
-		public static Vector3 WithPerpendicularSpeedCap(this Vector3 velocity, Vector3 gravity, float minVelocity, float maxVelocity) {
-			Vector3 perpendicular = PerpendicularTo(velocity, gravity);
+		public static Vector3 WithPerpendicularSpeedCap(this Vector3 velocity, Vector3 gravity, float maxVelocity) {
+			Vector3 perpendicular = velocity.PerpendicularTo(gravity);
 
-			if (perpendicular.sqrMagnitude >= minVelocity * minVelocity && perpendicular.sqrMagnitude <= maxVelocity * maxVelocity)
+			if (perpendicular.sqrMagnitude <= maxVelocity * maxVelocity)
 				return velocity;
 
 			perpendicular = perpendicular.normalized * maxVelocity;
 
-			Vector3 parallel = ParallelTo(velocity, gravity);
+			Vector3 parallel = velocity.ParallelTo(gravity);
 
 			return perpendicular + parallel;
 		}
@@ -63,10 +72,10 @@ namespace AbsoluteCommons.Physics {
 		/// Restricts the velocity vector according to a terminal velocity.
 		/// </summary>
 		public static Vector3 WithTerminalVelocity(this Vector3 velocity, Vector3 gravity, float terminalVelocity) {
-			if (!IsFallingToward(velocity, gravity))
+			if (!velocity.IsFallingToward(gravity))
 				return velocity;
 
-			Vector3 parallel = ParallelTo(velocity, gravity);
+			Vector3 parallel = velocity.ParallelTo(gravity);
 
 			if (parallel.sqrMagnitude < terminalVelocity * terminalVelocity)
 				return velocity;
@@ -76,10 +85,10 @@ namespace AbsoluteCommons.Physics {
 
 		/// <inheritdoc cref="WithTerminalVelocity(Vector3, Vector3, float)"/>
 		public static bool RestrictTerminalVelocity(ref Vector3 velocity, Vector3 gravity, float terminalVelocity) {
-			if (!IsFallingToward(velocity, gravity))
+			if (!velocity.IsFallingToward(gravity))
 				return false;
 
-			Vector3 parallel = ParallelTo(velocity, gravity);
+			Vector3 parallel = velocity.ParallelTo(gravity);
 
 			if (parallel.sqrMagnitude < terminalVelocity * terminalVelocity)
 				return false;
@@ -93,10 +102,10 @@ namespace AbsoluteCommons.Physics {
 		/// Returns whether the velocity vector is at terminal velocity with respect to the gravity vector.
 		/// </summary>
 		public static bool AtTerminalVelocity(this Vector3 velocity, Vector3 gravity, float terminalVelocity) {
-			if (!IsFallingToward(velocity, gravity))
+			if (!velocity.IsFallingToward(gravity))
 				return false;
 
-			Vector3 parallel = ParallelTo(velocity, gravity);
+			Vector3 parallel = velocity.ParallelTo(gravity);
 
 			return parallel.sqrMagnitude >= terminalVelocity * terminalVelocity;
 		}

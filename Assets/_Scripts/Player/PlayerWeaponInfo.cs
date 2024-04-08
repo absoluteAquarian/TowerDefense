@@ -65,6 +65,14 @@ namespace TowerDefense.Player {
 				_previousWeapon = _currentWeapon;
 			}
 
+			if (!_playWeaponAnimation) {
+				// Ensure that the player can't get stuck in a Deploying or Holstering state
+				if (_deployState == DeployState.Deploying)
+					InitWeaponObject();
+				else if (_deployState == DeployState.Holstering)
+					DestroyWeaponObject();
+			}
+
 			if (Input.GetButtonDown("Deploy Weapon"))
 				DeployWeapon();
 			else if (Input.GetButtonDown("Holster Weapon"))
@@ -203,11 +211,10 @@ namespace TowerDefense.Player {
 		private void InitWeaponObject() {
 			DestroyWeaponObject();
 			_displayedWeapon = _currentWeapon;
+			_deployState = DeployState.Deployed;
 			
 			if (_displayedWeapon == WeaponType.None)
 				return;
-
-			_deployState = DeployState.Deployed;
 
 			_weaponObject = database.InstantiateWeapon(_displayedWeapon);
 			Weapon info = _weaponObject.GetComponent<Weapon>();
@@ -293,19 +300,6 @@ namespace TowerDefense.Player {
 					animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
 					animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0.0f);
 				}
-			}
-		}
-
-		private void OnAnimatorMove() {
-			// Rotate the head to look at where the camera is pointing
-			if (_thirdPersonAnimator) {
-				_thirdPersonAnimator.SetLookAtWeight(1.0f);
-
-				const float DISTANCE = 100f;
-				if (_camera.CheckCameraRaycast(out RaycastHit hit, DISTANCE))
-					_thirdPersonAnimator.SetLookAtPosition(hit.point);
-				else
-					_thirdPersonAnimator.SetLookAtPosition(_camera.transform.position + _camera.transform.forward * DISTANCE);
 			}
 		}
 	}
