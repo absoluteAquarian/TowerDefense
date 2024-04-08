@@ -46,17 +46,21 @@ namespace TowerDefense.Player {
 
 			// Set the IK rotation for the right arm to match the player's aim
 			// (Left arm will be handled by IK position)
+			/*
 			Transform rightShoulder = _thirdPersonAnimator.GetBoneTransform(HumanBodyBones.RightShoulder);
 			Quaternion rotation = Quaternion.LookRotation(target - rightShoulder.position, Vector3.up);
 			rightShoulder.rotation = rotation;
+			*/
 		}
 
 		private void ClearIK() {
 			_thirdPersonAnimator.SetLookAtWeight(0);
 			_thirdPersonAnimator.SetLookAtPosition(Vector3.zero);
 
+			/*
 			Transform rightShoulder = _thirdPersonAnimator.GetBoneTransform(HumanBodyBones.RightShoulder);
 			rightShoulder.rotation = Quaternion.identity;
+			*/
 		}
 	}
 }
