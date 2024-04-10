@@ -1594,7 +1594,7 @@ MonoBehaviour:
   _airFriction: 7
   canJump: 1
   canMoveHorizontally: 1
-  zeroVelocity: 0
+  zeroVelocity: 1
 --- !u!114 &2105988631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1649,6 +1649,8 @@ MonoBehaviour:
   database: {fileID: 11400000, guid: 7c4bd395469524244ae1d082b633fa57, type: 2}
   _currentWeapon: 1
   _displayedWeapon: 0
+  _hasShootCooldown: 0
+  _timers: {fileID: 0}
   _playWeaponAnimation: 0
   _deployState: 0
   _transitionTime: 0
@@ -1656,8 +1658,6 @@ MonoBehaviour:
   _holsterHideTime: 0.8
   _weaponObject: {fileID: 0}
   _firstPersonWeaponObject: {fileID: 0}
-  _leftHandIKTarget: {fileID: 0}
-  _firstPersonLeftHandIKTarget: {fileID: 0}
 --- !u!114 &2105988635
 MonoBehaviour:
   m_ObjectHideFlags: 0

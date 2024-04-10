@@ -22,6 +22,10 @@ namespace TowerDefense.Player {
 			private set => _displayedWeapon = value;
 		}
 
+		[SerializeField, ReadOnly] private bool _hasShootCooldown;
+
+		[SerializeField, ReadOnly] private TimersTracker _timers;
+
 		[Header("Animation Properties")]
 		[SerializeField, ReadOnly] private bool _playWeaponAnimation;
 		[SerializeField, ReadOnly] private DeployState _deployState;
@@ -39,13 +43,11 @@ namespace TowerDefense.Player {
 
 		private CameraFollow _camera;
 
-		private TimersTracker _timers;
-
 		[Header("IK Properties")]
 		[SerializeField, ReadOnly] private GameObject _weaponObject;
 		[SerializeField, ReadOnly] private GameObject _firstPersonWeaponObject;
-		[SerializeField, ReadOnly] private GameObject _leftHandIKTarget;
-		[SerializeField, ReadOnly] private GameObject _firstPersonLeftHandIKTarget;
+	//	[SerializeField, ReadOnly] private GameObject _leftHandIKTarget;
+	//	[SerializeField, ReadOnly] private GameObject _firstPersonLeftHandIKTarget;
 	//	[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
 	//	[SerializeField, ReadOnly] private GameObject _firstPersonRightHandIKTarget;
 
@@ -197,16 +199,33 @@ namespace TowerDefense.Player {
 		}
 
 		private void ShootWeapon() {
-			if (_deployState != DeployState.Deployed || _currentWeapon == WeaponType.None)
+			if (_hasShootCooldown || _deployState != DeployState.Deployed || _currentWeapon == WeaponType.None)
 				return;
+
+			_hasShootCooldown = true;
+
+			Weapon info = database.GetWeaponInfo(_currentWeapon);
 
 			// TODO: spawn projectile
 
+			// TODO: repeating timer for automatic weapons?  Note for future, Timer object can be reused
+			_timers.AddTimer(Timer.CreateCountdown(ResetShootTriggers, info.shootTime));
+
 			if (_firstPersonAnimator)
-				_firstPersonAnimator.ForceTrigger("shoot");
+				_firstPersonAnimator.SetTrigger("shoot");
 
 			if (_thirdPersonAnimator)
-				_thirdPersonAnimator.ForceTrigger("shoot");
+				_thirdPersonAnimator.SetTrigger("shoot");
+		}
+
+		private void ResetShootTriggers() {
+			_hasShootCooldown = false;
+
+			if (_firstPersonAnimator)
+				_firstPersonAnimator.ResetTrigger("shoot");
+
+			if (_thirdPersonAnimator)
+				_thirdPersonAnimator.ResetTrigger("shoot");
 		}
 
 		public void TickWeaponTransition(float normalizedTime) {
@@ -255,7 +274,7 @@ namespace TowerDefense.Player {
 				info.rightHandBone.transform.SetParent(rightHand, false);
 
 				// The player is right-handed, so only the left hand needs to be set up for IK
-				_leftHandIKTarget = info.leftHandBone;
+			//	_leftHandIKTarget = info.leftHandBone;
 			}
 
 			_firstPersonWeaponObject = database.InstantiateWeapon(_displayedWeapon);
@@ -266,14 +285,18 @@ namespace TowerDefense.Player {
 				info.rightHandBone.transform.SetParent(rightHand, false);
 
 				// The player is right-handed, so only the left hand needs to be set up for IK
-				_firstPersonLeftHandIKTarget = info.leftHandBone;
+			//	_firstPersonLeftHandIKTarget = info.leftHandBone;
 			}
 
-			if (_firstPersonAnimator)
+			if (_firstPersonAnimator)  {
 				_firstPersonAnimator.SetBool("weaponDeployed", true);
+				_firstPersonAnimator.SetFloat("shootSpeed", info.shootAnimationMultiplier);
+			}
 
-			if (_thirdPersonAnimator)
+			if (_thirdPersonAnimator) {
 				_thirdPersonAnimator.SetBool("weaponDeployed", true);
+				_thirdPersonAnimator.SetFloat("shootSpeed", info.shootAnimationMultiplier);
+			}
 		}
 
 		private void DestroyWeaponObject() {
@@ -282,8 +305,8 @@ namespace TowerDefense.Player {
 
 			TypeExtensions.DestroyAndSetNull(ref _weaponObject);
 			TypeExtensions.DestroyAndSetNull(ref _firstPersonWeaponObject);
-			TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
-			TypeExtensions.DestroyAndSetNull(ref _firstPersonLeftHandIKTarget);
+		//	TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
+		//	TypeExtensions.DestroyAndSetNull(ref _firstPersonLeftHandIKTarget);
 		//	TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
 		//	TypeExtensions.DestroyAndSetNull(ref _firstPersonRightHandIKTarget);
 
@@ -296,9 +319,13 @@ namespace TowerDefense.Player {
 
 		// TODO: none of this works.  too lazy to fix it right now though
 
-		public void HandleFirstPersonIK(Animator animator) => HandleIK(animator, _firstPersonLeftHandIKTarget, null);
+		public void HandleFirstPersonIK(Animator animator) {
+		//	HandleIK(animator, _firstPersonLeftHandIKTarget, null);
+		}
 
-		public void HandleThirdPersonIK(Animator animator) => HandleIK(animator, _leftHandIKTarget, null);
+		public void HandleThirdPersonIK(Animator animator) {
+		//	HandleIK(animator, _leftHandIKTarget, null);
+		}
 
 		private void HandleIK(Animator animator, GameObject leftHandTarget, GameObject rightHandTarget) {
 			if (animator) {

@@ -79,10 +79,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   model: {fileID: 7761379277576231337}
   rightHandBone: {fileID: 7113673403389670413}
-  leftHandBone: {fileID: 2375428404904878986}
   deployShowTime: 0.2
   holsterHideTime: 0.3
-  shootSpeedMultiplier: 0.3
+  shootAnimationMultiplier: 3.5
+  shootTime: 0.125
 --- !u!1001 &7454755379106243832
 PrefabInstance:
   m_ObjectHideFlags: 0

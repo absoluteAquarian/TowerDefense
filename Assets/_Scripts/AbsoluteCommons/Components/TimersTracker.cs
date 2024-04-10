@@ -137,8 +137,8 @@ namespace AbsoluteCommons.Components {
 			return new Timer(initial, target, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountdown(Action onCompleted, float target, bool repeating = false) {
-			return new Timer(target, 0, repeating, onCompleted);
+		public static Timer CreateCountdown(Action onCompleted, float initial, bool repeating = false) {
+			return new Timer(initial, 0, repeating, onCompleted);
 		}
 
 		public static Timer CreateCountdown(Action onCompleted, float initial, float target, bool repeating = false) {
