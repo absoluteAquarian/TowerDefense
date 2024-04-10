@@ -96,8 +96,17 @@ namespace TowerDefense.Player {
 
 			Vector3 unitHorizontal = horizontalVelocity.normalized;
 
-			_thirdPersonAnimator.SetFloat("forwardVelocity", Vector3.Dot(unitHorizontal, movementRotation * Vector3.forward));
-			_thirdPersonAnimator.SetFloat("strafeVelocity", Vector3.Dot(unitHorizontal, movementRotation * Vector3.right));
+			float forwardDot = Vector3.Dot(unitHorizontal, movementRotation * Vector3.forward);
+			if (Mathf.Abs(forwardDot) < 0.01f)
+				forwardDot = 0;
+
+			_thirdPersonAnimator.SetFloat("forwardVelocity", forwardDot);
+
+			float rightDot = Vector3.Dot(unitHorizontal, movementRotation * Vector3.right);
+			if (Mathf.Abs(rightDot) < 0.01f)
+				rightDot = 0;
+
+			_thirdPersonAnimator.SetFloat("strafeVelocity", rightDot);
 
 			bool canTaunt = _isGrounded && !_thirdPersonAnimator.GetBool("landing");
 
