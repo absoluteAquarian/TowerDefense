@@ -40,10 +40,10 @@ namespace TowerDefense.Player {
 
 		[Header("IK Properties")]
 		[SerializeField, ReadOnly] private GameObject _weaponObject;
-		[SerializeField, ReadOnly] private GameObject _leftHandIKTarget;
-	//	[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
 		[SerializeField, ReadOnly] private GameObject _firstPersonWeaponObject;
+		[SerializeField, ReadOnly] private GameObject _leftHandIKTarget;
 		[SerializeField, ReadOnly] private GameObject _firstPersonLeftHandIKTarget;
+	//	[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
 	//	[SerializeField, ReadOnly] private GameObject _firstPersonRightHandIKTarget;
 
 		private void Awake() {
@@ -51,7 +51,7 @@ namespace TowerDefense.Player {
 			_firstPersonAnimator = gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
 			_thirdPersonAnimator = gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
 
-			_camera = Camera.main.GetComponent<CameraFollow>();
+			_camera = Camera.main.GetComponent<CameraFollow>();	
 		}
 
 		private void Start() {
@@ -67,9 +67,19 @@ namespace TowerDefense.Player {
 
 			if (!_playWeaponAnimation) {
 				// Ensure that the player can't get stuck in a Deploying or Holstering state
-				if (_deployState == DeployState.Deploying)
+				if (_deployState == DeployState.Deploying) {
+					_deployState = DeployState.Holstered;  // Force the weapon to deploy
 					InitWeaponObject();
-				else if (_deployState == DeployState.Holstering)
+				} else if (_deployState == DeployState.Holstering)
+					DestroyWeaponObject();
+			}
+
+			// Ensure that the weapon is visible when deployed and not visible when holstered
+			if (_deployState == DeployState.Deployed) {
+				if (!_weaponObject)
+					InitWeaponObject();
+			} else if (_deployState == DeployState.Holstered) {
+				if (_weaponObject)
 					DestroyWeaponObject();
 			}
 
@@ -78,6 +88,7 @@ namespace TowerDefense.Player {
 			else if (Input.GetButtonDown("Holster Weapon"))
 				HolsterWeapon();
 
+			// Update the animator
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetInteger("weaponState", (int)_deployState);
 
@@ -123,10 +134,10 @@ namespace TowerDefense.Player {
 				InitWeaponObject();
 				
 				if (_firstPersonAnimator)
-					_firstPersonAnimator.SetTrigger("immediateDeployWeapon");
+					_firstPersonAnimator.ForceTrigger("immediateDeployWeapon");
 
 				if (_thirdPersonAnimator)
-					_thirdPersonAnimator.SetTrigger("immediateDeployWeapon");
+					_thirdPersonAnimator.ForceTrigger("immediateDeployWeapon");
 
 				return;
 			}
@@ -159,10 +170,10 @@ namespace TowerDefense.Player {
 				DestroyWeaponObject();
 
 				if (_firstPersonAnimator)
-					_firstPersonAnimator.SetTrigger("immediateHolsterWeapon");
+					_firstPersonAnimator.ForceTrigger("immediateHolsterWeapon");
 
 				if (_thirdPersonAnimator)
-					_thirdPersonAnimator.SetTrigger("immediateHolsterWeapon");
+					_thirdPersonAnimator.ForceTrigger("immediateHolsterWeapon");
 
 				return;
 			}
@@ -250,10 +261,10 @@ namespace TowerDefense.Player {
 			_deployState = DeployState.Holstered;
 
 			TypeExtensions.DestroyAndSetNull(ref _weaponObject);
-			TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
-		//	TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
 			TypeExtensions.DestroyAndSetNull(ref _firstPersonWeaponObject);
+			TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
 			TypeExtensions.DestroyAndSetNull(ref _firstPersonLeftHandIKTarget);
+		//	TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
 		//	TypeExtensions.DestroyAndSetNull(ref _firstPersonRightHandIKTarget);
 
 			if (_firstPersonAnimator)
@@ -263,44 +274,73 @@ namespace TowerDefense.Player {
 				_thirdPersonAnimator.SetBool("weaponDeployed", false);
 		}
 
-		private void OnAnimatorIK(int layerIndex) {
-			HandleIK(_firstPersonAnimator, _firstPersonLeftHandIKTarget, null);
-			HandleIK(_thirdPersonAnimator, _leftHandIKTarget, null);
-		}
+		// TODO: none of this works.  too lazy to fix it right now though
+
+		public void HandleFirstPersonIK(Animator animator) => HandleIK(animator, _firstPersonLeftHandIKTarget, null);
+
+		public void HandleThirdPersonIK(Animator animator) => HandleIK(animator, _leftHandIKTarget, null);
 
 		private void HandleIK(Animator animator, GameObject leftHandTarget, GameObject rightHandTarget) {
 			if (animator) {
 				// IK should only be active when weapon is fully deployed; the other states either have a transition animation or no weapon
 				if (_deployState == DeployState.Deployed) {
-					/*
 					// Set the right hand target position and rotation, if one has been assigned
-					if (rightHandTarget) {
-						animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1.0f);
-						animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 1.0f);
-						animator.SetIKPosition(AvatarIKGoal.RightHand, rightHandTarget.transform.position);
-						animator.SetIKRotation(AvatarIKGoal.RightHand, rightHandTarget.transform.rotation);
-					}
-					*/
+					if (rightHandTarget)
+						HandleIK_SetParameters(animator, true, rightHandTarget);
+					else
+						ClearRightHandIK(animator);
 
 					// Set the left hand target position and rotation, if one has been assigned
-					if (leftHandTarget) {
-						animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1.0f);
-						animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 1.0f);
-						animator.SetIKPosition(AvatarIKGoal.LeftHand, leftHandTarget.transform.position);
-						animator.SetIKRotation(AvatarIKGoal.LeftHand, leftHandTarget.transform.rotation);
-					}
+					if (leftHandTarget)
+						HandleIK_SetParameters(animator, false, leftHandTarget);
+					else
+						ClearLeftHandIK(animator);
 				} else {
-					/*
-					// Reset the right hand target position and rotation
-					animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 0.0f);
-					animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0.0f);
-					*/
-
-					// Reset the left hand target position and rotation
-					animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
-					animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0.0f);
+					ClearRightHandIK(animator);
+					ClearLeftHandIK(animator);
 				}
 			}
+		}
+
+		private void HandleIK_SetParameters(Animator animator, bool rightHand, GameObject target) {
+			AvatarIKGoal goal = rightHand ? AvatarIKGoal.RightHand : AvatarIKGoal.LeftHand;
+			AvatarIKHint hint = rightHand ? AvatarIKHint.RightElbow : AvatarIKHint.LeftElbow;
+
+			animator.SetIKPositionWeight(goal, 1.0f);
+			animator.SetIKRotationWeight(goal, 1.0f);
+			animator.SetIKPosition(goal, target.transform.position);
+
+			Quaternion rotation = target.transform.rotation;
+			// Adjust the rotation so that the hand is in the correct orientation (it is offset by a 90 degree rotation in two axes)
+			// TODO: right hand doesn't use IK, will this work?
+			rotation *= rightHand ? Quaternion.Euler(0, 90, 90) : Quaternion.Euler(0, -90, 90);
+
+			animator.SetIKRotation(goal, rotation);
+
+			// Set the hint position
+			animator.SetIKHintPositionWeight(hint, 1.0f);
+			animator.SetIKHintPosition(hint, target.transform.position);
+		}
+
+		public void ClearIK(Animator animator) {
+			if (animator) {
+				ClearRightHandIK(animator);
+				ClearLeftHandIK(animator);
+			}
+		}
+
+		private void ClearRightHandIK(Animator animator) {
+			// Reset the right hand target position and rotation
+			animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 0.0f);
+			animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0.0f);
+			animator.SetIKHintPositionWeight(AvatarIKHint.RightElbow, 0.0f);
+		}
+
+		private void ClearLeftHandIK(Animator animator) {
+			// Reset the left hand target position and rotation
+			animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
+			animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0.0f);
+			animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 0.0f);
 		}
 	}
 }

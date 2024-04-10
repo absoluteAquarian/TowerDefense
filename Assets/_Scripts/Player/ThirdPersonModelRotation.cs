@@ -16,7 +16,6 @@ namespace TowerDefense.Player {
 		private void Awake() {
 			_weaponInfo = GetComponentInParent<PlayerWeaponInfo>();
 
-			// NOTE: the child path may need to be changed if this script is used in a different project
 			_thirdPersonAnimator = GetComponent<Animator>();
 
 			_camera = Camera.main.GetComponent<CameraFollow>();
@@ -28,6 +27,8 @@ namespace TowerDefense.Player {
 				ClearIK();
 				return;
 			}
+
+		//	_weaponInfo.HandleThirdPersonIK(_thirdPersonAnimator);
 
 			// Make the player look at the target
 			const float DISTANCE = 100f;
@@ -61,6 +62,8 @@ namespace TowerDefense.Player {
 			Transform rightShoulder = _thirdPersonAnimator.GetBoneTransform(HumanBodyBones.RightShoulder);
 			rightShoulder.rotation = Quaternion.identity;
 			*/
+
+			_weaponInfo.ClearIK(_thirdPersonAnimator);
 		}
 	}
 }
