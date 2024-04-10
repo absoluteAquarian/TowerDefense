@@ -96,7 +96,7 @@ namespace TowerDefense.Player {
 			else if (Input.GetButtonDown("Holster Weapon"))
 				HolsterWeapon();
 			
-			if (Input.GetButton("Fire"))
+			if (CanShootWeapon())
 				ShootWeapon();
 			else
 				_triggerFinger = false;
@@ -202,10 +202,19 @@ namespace TowerDefense.Player {
 				_thirdPersonAnimator.SetTrigger("holsterWeapon");
 		}
 
-		private void ShootWeapon() {
+		private bool CanShootWeapon() {
 			if (_hasShootCooldown || _deployState != DeployState.Deployed || _currentWeapon == WeaponType.None)
-				return;
+				return false;
 
+			Weapon info = database.GetWeaponInfo(_currentWeapon);
+
+			if (!info.autoFire)
+				return Input.GetButtonDown("Fire");
+
+			return Input.GetButton("Fire");
+		}
+
+		private void ShootWeapon() {
 			_hasShootCooldown = true;
 
 			Weapon info = database.GetWeaponInfo(_currentWeapon);
@@ -241,7 +250,7 @@ namespace TowerDefense.Player {
 			// Checking in Update may be too late
 			Weapon info = database.GetWeaponInfo(_currentWeapon);
 
-			if (info.autoFire && Input.GetButton("Fire")) {
+			if (info.autoFire && CanShootWeapon()) {
 				_triggerFinger = true;
 				ShootWeapon();
 			}
