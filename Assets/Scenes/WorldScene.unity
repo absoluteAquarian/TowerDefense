@@ -402,7 +402,7 @@ Transform:
   m_GameObject: {fileID: 502305142}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -500}
   m_LocalScale: {x: 5, y: 1, z: 5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -497,7 +497,7 @@ Transform:
   m_GameObject: {fileID: 723509313}
   serializedVersion: 2
   m_LocalRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 2.5, z: -3}
+  m_LocalPosition: {x: 0, y: 2.5, z: -503}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -660,7 +660,7 @@ Transform:
   m_GameObject: {fileID: 958421479}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: 0, y: 3, z: -500}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1517,6 +1517,7 @@ GameObject:
   - component: {fileID: 2105988632}
   - component: {fileID: 2105988631}
   - component: {fileID: 2105988634}
+  - component: {fileID: 2105988635}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -1533,7 +1534,7 @@ Transform:
   m_GameObject: {fileID: 2105988624}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -500}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1657,6 +1658,19 @@ MonoBehaviour:
   _firstPersonWeaponObject: {fileID: 0}
   _leftHandIKTarget: {fileID: 0}
   _firstPersonLeftHandIKTarget: {fileID: 0}
+--- !u!114 &2105988635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2105988624}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdd2c4e7a8e25884896b21cc8a5e8672, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _timersList: []
 --- !u!1001 &1341535794589777772
 PrefabInstance:
   m_ObjectHideFlags: 0

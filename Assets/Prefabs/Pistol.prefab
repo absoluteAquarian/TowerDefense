@@ -82,6 +82,7 @@ MonoBehaviour:
   leftHandBone: {fileID: 2375428404904878986}
   deployShowTime: 0.2
   holsterHideTime: 0.3
+  shootSpeedMultiplier: 0.3
 --- !u!1001 &7454755379106243832
 PrefabInstance:
   m_ObjectHideFlags: 0

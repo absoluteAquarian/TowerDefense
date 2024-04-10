@@ -8,5 +8,6 @@ namespace TowerDefense.Weapons {
 		public GameObject leftHandBone;
 		public float deployShowTime = 0f;
 		public float holsterHideTime = 1f;
+		public float shootSpeedMultiplier = 1f;
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using AbsoluteCommons.Attributes;
+using AbsoluteCommons.Components;
 using AbsoluteCommons.Utility;
 using TowerDefense.CameraComponents;
 using TowerDefense.Weapons;
@@ -38,6 +39,8 @@ namespace TowerDefense.Player {
 
 		private CameraFollow _camera;
 
+		private TimersTracker _timers;
+
 		[Header("IK Properties")]
 		[SerializeField, ReadOnly] private GameObject _weaponObject;
 		[SerializeField, ReadOnly] private GameObject _firstPersonWeaponObject;
@@ -51,7 +54,9 @@ namespace TowerDefense.Player {
 			_firstPersonAnimator = gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
 			_thirdPersonAnimator = gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
 
-			_camera = Camera.main.GetComponent<CameraFollow>();	
+			_camera = Camera.main.GetComponent<CameraFollow>();
+
+			_timers = GetComponent<TimersTracker>();
 		}
 
 		private void Start() {
@@ -87,6 +92,8 @@ namespace TowerDefense.Player {
 				DeployWeapon();
 			else if (Input.GetButtonDown("Holster Weapon"))
 				HolsterWeapon();
+			else if (Input.GetButtonDown("Fire"))
+				ShootWeapon();
 
 			// Update the animator
 			if (_firstPersonAnimator)
@@ -187,6 +194,19 @@ namespace TowerDefense.Player {
 
 			if (_thirdPersonAnimator)
 				_thirdPersonAnimator.SetTrigger("holsterWeapon");
+		}
+
+		private void ShootWeapon() {
+			if (_deployState != DeployState.Deployed || _currentWeapon == WeaponType.None)
+				return;
+
+			// TODO: spawn projectile
+
+			if (_firstPersonAnimator)
+				_firstPersonAnimator.ForceTrigger("shoot");
+
+			if (_thirdPersonAnimator)
+				_thirdPersonAnimator.ForceTrigger("shoot");
 		}
 
 		public void TickWeaponTransition(float normalizedTime) {

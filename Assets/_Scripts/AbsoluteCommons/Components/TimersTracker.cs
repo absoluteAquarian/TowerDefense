@@ -2,6 +2,7 @@
 using AbsoluteCommons.Collections;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -16,6 +17,9 @@ namespace AbsoluteCommons.Components {
 		private readonly Queue<Timer> _pendingRemovals = new();
 
 		private static int _instanceCount;
+
+		// Editor stuff
+		[SerializeField, ReadOnly] private Timer[] _timersList = Array.Empty<Timer>();
 
 		public void AddTimer(Timer timer) {
 			if (timer.isTracked)
@@ -62,6 +66,10 @@ namespace AbsoluteCommons.Components {
 				ActuallyAddTimer(timer);
 			while (_pendingRemovals.TryDequeue(out Timer timer))
 				ActuallyRemoveTimer(timer);
+
+			// If the editor is open, update the list for inspection
+			if (Application.isEditor)
+				_timersList = _timers.Enumerate(_indices).ToArray();
 		}
 
 		private class DestroyTimerOnCompletion {
@@ -90,7 +98,6 @@ namespace AbsoluteCommons.Components {
 
 		public readonly float initial;
 		public readonly float target;
-		public readonly float step;
 		public readonly bool repeating;
 
 		[Header("Private Members")]
@@ -98,6 +105,7 @@ namespace AbsoluteCommons.Components {
 		[SerializeField, ReadOnly] private State _state = State.NotStarted;
 		[SerializeField, ReadOnly] internal long uniqueID = -1;
 		internal bool isTracked;
+		private readonly bool decrement;
 		
 		internal event Action OnComplete;
 
@@ -109,36 +117,32 @@ namespace AbsoluteCommons.Components {
 
 		public bool IsRepeating => repeating;
 
-		private Timer(float initial, float target, float step, bool repeating, Action onComplete) {
-			if (step == 0)
-				throw new ArgumentException("Step must be non-zero");
-			else if (step > 0 && target < initial)
-				throw new ArgumentException("Target must be greater than initial when step is positive");
-			else if (step < 0 && target > initial)
-				throw new ArgumentException("Target must be less than initial when step is negative");
+		private Timer(float initial, float target, bool repeating, Action onComplete) {
+			if (initial == target)
+				throw new ArgumentException("Initial and target values cannot be equal");
 
 			this.initial = initial;
 			this.target = target;
-			this.step = step;
 			this.repeating = repeating;
 			_current = initial;
+			decrement = initial > target;
 			OnComplete += onComplete;
 		}
 
-		public static Timer CreateCountup(Action onCompleted, float target, float step, bool repeating = false) {
-			return new Timer(0, target, step, repeating, onCompleted);
+		public static Timer CreateCountup(Action onCompleted, float target, bool repeating = false) {
+			return new Timer(0, target, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountup(Action onCompleted, float initial, float target, float step, bool repeating = false) {
-			return new Timer(initial, target, step, repeating, onCompleted);
+		public static Timer CreateCountup(Action onCompleted, float initial, float target, bool repeating = false) {
+			return new Timer(initial, target, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountdown(Action onCompleted, float target, float step, bool repeating = false) {
-			return new Timer(target, 0, step, repeating, onCompleted);
+		public static Timer CreateCountdown(Action onCompleted, float target, bool repeating = false) {
+			return new Timer(target, 0, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountdown(Action onCompleted, float initial, float target, float step, bool repeating = false) {
-			return new Timer(initial, target, step, repeating, onCompleted);
+		public static Timer CreateCountdown(Action onCompleted, float initial, float target, bool repeating = false) {
+			return new Timer(initial, target, repeating, onCompleted);
 		}
 
 		public void Start() {
@@ -166,14 +170,14 @@ namespace AbsoluteCommons.Components {
 
 		private bool HasTargetBeenReached() {
 			// Equals case is separated since it will be encountered more often
-			return _current == target || (step > 0 && _current > target) || (step < 0 && _current < target);
+			return _current == target || (!decrement && _current > target) || (decrement && _current < target);
 		}
 
 		internal void Tick() {
 			if (_state != State.Running)
 				return;
 
-			_current += Time.deltaTime;
+			_current = decrement ? _current - Time.deltaTime : _current + Time.deltaTime;
 
 			if (repeating) {
 				while (HasTargetBeenReached()) {
