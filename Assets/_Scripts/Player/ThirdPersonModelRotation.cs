@@ -40,7 +40,7 @@ namespace TowerDefense.Player {
 
 			_thirdPersonAnimator.SetLookAtPosition(target);
 			_thirdPersonAnimator.SetLookAtWeight(weight: 1,
-				bodyWeight: 0.6f,
+				bodyWeight: 0.8f,
 				headWeight: 0.8f,
 				eyesWeight: 0f,
 				clampWeight: 0.5f);
