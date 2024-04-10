@@ -23,6 +23,7 @@ namespace TowerDefense.Player {
 		}
 
 		[SerializeField, ReadOnly] private bool _hasShootCooldown;
+		[SerializeField, ReadOnly] private bool _triggerFinger;
 
 		[SerializeField, ReadOnly] private TimersTracker _timers;
 
@@ -94,8 +95,11 @@ namespace TowerDefense.Player {
 				DeployWeapon();
 			else if (Input.GetButtonDown("Holster Weapon"))
 				HolsterWeapon();
-			else if (Input.GetButtonDown("Fire"))
+			
+			if (Input.GetButton("Fire"))
 				ShootWeapon();
+			else
+				_triggerFinger = false;
 
 			// Update the animator
 			if (_firstPersonAnimator)
@@ -207,15 +211,21 @@ namespace TowerDefense.Player {
 			Weapon info = database.GetWeaponInfo(_currentWeapon);
 
 			// TODO: spawn projectile
+			
+			if (!info.autoFire || !_triggerFinger) {
+				Timer timer = Timer.CreateCountdown(ResetShootTriggers, info.shootTime, repeating: info.autoFire);
+				timer.Start();
 
-			// TODO: repeating timer for automatic weapons?  Note for future, Timer object can be reused
-			_timers.AddTimer(Timer.CreateCountdown(ResetShootTriggers, info.shootTime));
+				_timers.AddTimer(timer);
+			}
 
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetTrigger("shoot");
 
 			if (_thirdPersonAnimator)
 				_thirdPersonAnimator.SetTrigger("shoot");
+
+			_triggerFinger = true;
 		}
 
 		private void ResetShootTriggers() {
@@ -226,6 +236,15 @@ namespace TowerDefense.Player {
 
 			if (_thirdPersonAnimator)
 				_thirdPersonAnimator.ResetTrigger("shoot");
+
+			// If the weapon autofires, check the input and shoot again
+			// Checking in Update may be too late
+			Weapon info = database.GetWeaponInfo(_currentWeapon);
+
+			if (info.autoFire && Input.GetButton("Fire")) {
+				_triggerFinger = true;
+				ShootWeapon();
+			}
 		}
 
 		public void TickWeaponTransition(float normalizedTime) {

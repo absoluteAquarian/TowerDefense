@@ -10,5 +10,6 @@ namespace TowerDefense.Weapons {
 		public float holsterHideTime = 1f;
 		public float shootAnimationMultiplier = 1f;
 		public float shootTime = 1f;
+		public bool autoFire = false;
 	}
 }
