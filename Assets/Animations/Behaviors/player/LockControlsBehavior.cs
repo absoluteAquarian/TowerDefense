@@ -13,17 +13,21 @@ namespace TowerDefense.Animations.Behaviors.Player {
 		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			// Lock the player's controls
 			var controller = animator.gameObject.GetComponentInParent<PlayerMovement>();
-			controller.zeroVelocity = true;
-			controller.canJump = false;
-			controller.canMoveHorizontally = false;
+			if (controller) {
+				controller.zeroVelocity = true;
+				controller.canJump = false;
+				controller.canMoveHorizontally = false;
+			}
 		}
 
 		// OnStateExit is called when a transition ends and the state machine finishes evaluating this state
 		public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			// Unlock the player's controls
 			var controller = animator.gameObject.GetComponentInParent<PlayerMovement>();
-			controller.canJump = true;
-			controller.canMoveHorizontally = true;
+			if (controller) {
+				controller.canJump = true;
+				controller.canMoveHorizontally = true;
+			}
 		}
 
 		// OnStateMove is called right after Animator.OnAnimatorMove()

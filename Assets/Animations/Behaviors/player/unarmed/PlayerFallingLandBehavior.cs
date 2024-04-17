@@ -16,7 +16,7 @@ namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 			animator.SetBoolSafely("jumping", false);
 
 			var controller = animator.gameObject.GetComponentInParent<PlayerMovement>();
-			if (controller != null)
+			if (controller)
 				controller.canJump = false;
 		}
 
@@ -24,7 +24,7 @@ namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			if (jumpInterruptionTime > 0f && stateInfo.normalizedTime >= jumpInterruptionTime) {
 				var controller = animator.gameObject.GetComponentInParent<PlayerMovement>();
-				if (controller != null)
+				if (controller)
 					controller.canJump = true;
 			}
 		}
@@ -35,7 +35,7 @@ namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 			animator.SetBoolSafely("landing", false);
 
 			var controller = animator.gameObject.GetComponentInParent<PlayerMovement>();
-			if (controller != null)
+			if (controller)
 				controller.canJump = true;
 		}
 
