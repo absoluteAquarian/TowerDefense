@@ -15,5 +15,7 @@ namespace TowerDefense.Weapons {
 		public float spread = 0f;
 		public GameObject projectilePrefab;
 		public Transform projectileOrigin;
+		public Vector3 firstPersonModelOffset;
+		public Vector3 firstPersonModelRotation;
 	}
 }

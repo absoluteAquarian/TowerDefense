@@ -14,10 +14,12 @@ namespace TowerDefense.Animations.Behaviors.Player {
 		}
 
 		// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
-		//override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-		//{
-		//    
-		//}
+		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
+			// Ensure that the lock holds
+			FirstPersonModelRotation modelRotation = animator.GetComponent<FirstPersonModelRotation>();
+			if (modelRotation)
+				modelRotation.ForcedLock = lockOnEnter;
+		}
 
 		// OnStateExit is called when a transition ends and the state machine finishes evaluating this state
 		public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {

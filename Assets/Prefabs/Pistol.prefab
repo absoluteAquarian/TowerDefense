@@ -87,6 +87,8 @@ MonoBehaviour:
   spread: 10
   projectilePrefab: {fileID: 710789882229869826, guid: 3048a67ad9ba2484080b37b64a3452f7, type: 3}
   projectileOrigin: {fileID: 4491586127011210831}
+  firstPersonModelOffset: {x: 0.45, y: -0.2, z: 0.05}
+  firstPersonModelRotation: {x: 10, y: 0, z: 0}
 --- !u!1001 &7454755379106243832
 PrefabInstance:
   m_ObjectHideFlags: 0

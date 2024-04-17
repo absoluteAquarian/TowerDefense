@@ -35,6 +35,7 @@ namespace TowerDefense.Player {
 		[Header("Animation Properties")]
 		[SerializeField, ReadOnly] private bool _playWeaponAnimation;
 		[SerializeField, ReadOnly] private DeployState _deployState;
+		public DeployState DeployState => _deployState;
 		[SerializeField, ReadOnly] private float _transitionTime;
 		public float AnimationTransitionTime {
 			get => _transitionTime;
@@ -56,6 +57,11 @@ namespace TowerDefense.Player {
 	//	[SerializeField, ReadOnly] private GameObject _firstPersonLeftHandIKTarget;
 	//	[SerializeField, ReadOnly] private GameObject _rightHandIKTarget;
 	//	[SerializeField, ReadOnly] private GameObject _firstPersonRightHandIKTarget;
+
+		public Weapon GetWeaponObject() {
+			GameObject obj = _camera.firstPerson ? _firstPersonWeaponObject : _weaponObject;
+			return obj ? obj.GetComponent<Weapon>() : null;
+		}
 
 		private void Awake() {
 			// NOTE: the child paths may need to be changed if this script is used in a different project
@@ -238,7 +244,7 @@ namespace TowerDefense.Player {
 		private void ShootWeapon() {
 			_hasShootCooldown = true;
 
-			Weapon info = (_camera.firstPerson ? _firstPersonWeaponObject : _weaponObject).GetComponent<Weapon>();
+			Weapon info = GetWeaponObject();
 
 			ShootWeapon_SpawnProjectile(info);
 			

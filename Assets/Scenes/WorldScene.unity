@@ -593,7 +593,7 @@ MonoBehaviour:
   interpolationStrength: 5
   instantMovement: 1
   cullingDistance: 0.7
-  firstPerson: 0
+  firstPerson: 1
   _isCloseEnoughForFirstPerson: 0
   transitionInterpolationStrength: 1
   transitionRotationStrength: 45

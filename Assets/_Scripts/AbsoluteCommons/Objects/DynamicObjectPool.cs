@@ -15,6 +15,8 @@ namespace AbsoluteCommons.Objects {
 		private GameObject _container;
 		private int _index;
 
+		private static GameObject _visibleObjectContainer;
+
 		private void Awake() {
 			_pool = new List<GameObject>(_initialCapacity);
 			_dirty = new BitArray(_initialCapacity, true);
@@ -22,6 +24,14 @@ namespace AbsoluteCommons.Objects {
 				hideFlags = _showPoolInHierarchy ? HideFlags.None : HideFlags.HideInHierarchy
 			};
 			_container.transform.SetParent(transform, false);
+
+			// Make a global pool for objects in the world
+			// This is just so they don't clutter the scene list
+			if (Application.isEditor && _visibleObjectContainer == null) {
+				_visibleObjectContainer = new GameObject("Visible Dynamic Pool Objects");
+				_visibleObjectContainer.transform.SetParent(null, false);
+				_visibleObjectContainer.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+			}
 		}
 
 		public void SetPrefab(GameObject prefab) {
@@ -69,7 +79,7 @@ namespace AbsoluteCommons.Objects {
 			}
 
 			obj.SetActive(true);
-			obj.transform.SetParent(null, true);
+			obj.transform.SetParent(Application.isEditor ? _visibleObjectContainer.transform : null, true);
 
 			return obj;
 		}

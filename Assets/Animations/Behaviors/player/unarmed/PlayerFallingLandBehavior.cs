@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 	public class PlayerFallingLandBehavior : StateMachineBehaviour {
+		[SerializeField] private float jumpInterruptionTime;
+
 		// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 		public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			// Reset the fall time
@@ -19,10 +21,13 @@ namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 		}
 
 		// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
-		//override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-		//{
-		//    
-		//}
+		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
+			if (jumpInterruptionTime > 0f && stateInfo.normalizedTime >= jumpInterruptionTime) {
+				var controller = animator.gameObject.GetComponentInParent<PlayerMovement>();
+				if (controller != null)
+					controller.canJump = true;
+			}
+		}
 
 		// OnStateExit is called when a transition ends and the state machine finishes evaluating this state
 		public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {

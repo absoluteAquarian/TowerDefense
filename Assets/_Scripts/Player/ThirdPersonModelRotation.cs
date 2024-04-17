@@ -11,7 +11,11 @@ namespace TowerDefense.Player {
 
 		private Animator _thirdPersonAnimator;
 
-		public bool ForcedLock { get; set; }
+		private bool _forcedLock;
+		public bool ForcedLock {
+			get => _forcedLock;
+			set => _forcedLock = value;
+		}
 
 		private void Awake() {
 			_weaponInfo = GetComponentInParent<PlayerWeaponInfo>();
