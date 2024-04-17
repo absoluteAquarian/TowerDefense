@@ -367,6 +367,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71a6665a4a8c0d34290d2f9d0fef4f0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1102 &-3924357904212288615
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Apply IK
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 1
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: 0}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
 --- !u!114 &-3878410290355275241
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -597,6 +623,18 @@ AnimatorController:
     m_SyncedLayerAffectsTiming: 0
     m_Controller: {fileID: 9100000}
   - serializedVersion: 5
+    m_Name: Weapon IK
+    m_StateMachine: {fileID: 5193411862064686038}
+    m_Mask: {fileID: 0}
+    m_Motions: []
+    m_Behaviours: []
+    m_BlendingMode: 0
+    m_SyncedLayerIndex: -1
+    m_DefaultWeight: 1
+    m_IKPass: 1
+    m_SyncedLayerAffectsTiming: 0
+    m_Controller: {fileID: 9100000}
+  - serializedVersion: 5
     m_Name: Shooting
     m_StateMachine: {fileID: 2451338253893594329}
     m_Mask: {fileID: 0}
@@ -769,13 +807,13 @@ AnimatorStateMachine:
   - {fileID: -6332669885137525431}
   m_EntryTransitions: []
   m_StateMachineTransitions:
-  - first: {fileID: 1436161152539340898}
-    second:
-    - {fileID: -5277019760353073470}
   - first: {fileID: 1364538461638397865}
     second:
     - {fileID: -7440825042779070588}
     - {fileID: -8199947973482685010}
+  - first: {fileID: 1436161152539340898}
+    second:
+    - {fileID: -5277019760353073470}
   m_StateMachineBehaviours: []
   m_AnyStatePosition: {x: 50, y: 20, z: 0}
   m_EntryPosition: {x: 50, y: 120, z: 0}
@@ -793,7 +831,7 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: -9021344569595312462}
-    m_Position: {x: 320, y: 120, z: 0}
+    m_Position: {x: 320, y: 110, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 16750188575962376}
     m_Position: {x: 320, y: 10, z: 0}
@@ -914,6 +952,28 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
+--- !u!1107 &5193411862064686038
+AnimatorStateMachine:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Weapon IK
+  m_ChildStates:
+  - serializedVersion: 1
+    m_State: {fileID: -3924357904212288615}
+    m_Position: {x: 310, y: 110, z: 0}
+  m_ChildStateMachines: []
+  m_AnyStateTransitions: []
+  m_EntryTransitions: []
+  m_StateMachineTransitions: {}
+  m_StateMachineBehaviours: []
+  m_AnyStatePosition: {x: 50, y: 20, z: 0}
+  m_EntryPosition: {x: 50, y: 120, z: 0}
+  m_ExitPosition: {x: 800, y: 120, z: 0}
+  m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
+  m_DefaultState: {fileID: -3924357904212288615}
 --- !u!114 &5571467283500766268
 MonoBehaviour:
   m_ObjectHideFlags: 1

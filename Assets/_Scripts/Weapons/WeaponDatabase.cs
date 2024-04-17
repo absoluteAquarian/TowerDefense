@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿using AbsoluteCommons.Objects;
+using System.Collections.Generic;
+using TowerDefense.Weapons.Projectiles;
+using UnityEngine;
 
 namespace TowerDefense.Weapons {
 	[CreateAssetMenu(fileName = nameof(WeaponDatabase), menuName = "Tower Defense/Weapon Database", order = 1)]

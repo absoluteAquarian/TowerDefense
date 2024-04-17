@@ -52,8 +52,8 @@ namespace TowerDefense.Player {
 			// Rotate the arms towards the crosshair
 			_firstPersonAnimator.SetLookAtPosition(_camera.GetFirstPersonTarget() + _camera.transform.forward * 100f);
 			_firstPersonAnimator.SetLookAtWeight(weight: 1,
-				bodyWeight: 1f,
-				headWeight: 0f,
+				bodyWeight: 0.8f,
+				headWeight: 0.8f,
 				eyesWeight: 0f,
 				clampWeight: 0.5f);
 		}

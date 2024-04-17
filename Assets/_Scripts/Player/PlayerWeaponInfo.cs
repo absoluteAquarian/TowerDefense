@@ -1,12 +1,16 @@
 ﻿using AbsoluteCommons.Attributes;
 using AbsoluteCommons.Components;
+using AbsoluteCommons.Objects;
 using AbsoluteCommons.Utility;
 using TowerDefense.CameraComponents;
 using TowerDefense.Weapons;
+using TowerDefense.Weapons.Projectiles;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace TowerDefense.Player {
 	[AddComponentMenu("Player/Player Weapon Info")]
+	[RequireComponent(typeof(TimersTracker), typeof(DynamicObjectPool))]
 	public class PlayerWeaponInfo : MonoBehaviour {
 		public WeaponDatabase database;
 
@@ -26,6 +30,7 @@ namespace TowerDefense.Player {
 		[SerializeField, ReadOnly] private bool _triggerFinger;
 
 		[SerializeField, ReadOnly] private TimersTracker _timers;
+		[SerializeField, ReadOnly] private DynamicObjectPool _projectileCreator;
 
 		[Header("Animation Properties")]
 		[SerializeField, ReadOnly] private bool _playWeaponAnimation;
@@ -54,16 +59,23 @@ namespace TowerDefense.Player {
 
 		private void Awake() {
 			// NOTE: the child paths may need to be changed if this script is used in a different project
-			_firstPersonAnimator = gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
+			GameObject firstPerson = gameObject.GetChild("Animator/Y Bot Arms");
+			if (firstPerson)
+				_firstPersonAnimator = firstPerson.GetComponent<Animator>();
 			_thirdPersonAnimator = gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
 
 			_camera = Camera.main.GetComponent<CameraFollow>();
 
 			_timers = GetComponent<TimersTracker>();
+			_projectileCreator = GetComponent<DynamicObjectPool>();
+
+			// SetWeapon is responsible for initializing the animators and certain animation-related properties
+			SetWeapon(_currentWeapon);
+			_previousWeapon = _currentWeapon;
 		}
 
 		private void Start() {
-			DeployWeapon();
+		//	DeployWeapon();
 		}
 
 		private void Update() {
@@ -109,6 +121,13 @@ namespace TowerDefense.Player {
 				_thirdPersonAnimator.SetInteger("weaponState", (int)_deployState);
 		}
 
+		internal void UpdateDebugGUI(Text text, string origText) {
+			text.text = origText
+				.Replace("<TYPE>", _currentWeapon.ToString())
+				.Replace("<STATE>", _deployState.ToString())
+				.Replace("<STATE_TIME>", _transitionTime.ToString("0.000"));
+		}
+
 		public void SetWeapon(WeaponType weapon) {
 			_currentWeapon = weapon;
 
@@ -118,11 +137,13 @@ namespace TowerDefense.Player {
 				_holsterHideTime = Mathf.Clamp(info.holsterHideTime, 0f, 1f);
 			}
 
+			/*
 			// Only deploy if the game is running
 			if (Application.isPlaying) {
 				_deployState = DeployState.Holstered;  // Force the weapon to deploy
 				DeployWeapon();
 			}
+			*/
 
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetInteger("weaponID", (int)_currentWeapon);
@@ -217,9 +238,9 @@ namespace TowerDefense.Player {
 		private void ShootWeapon() {
 			_hasShootCooldown = true;
 
-			Weapon info = database.GetWeaponInfo(_currentWeapon);
+			Weapon info = (_camera.firstPerson ? _firstPersonWeaponObject : _weaponObject).GetComponent<Weapon>();
 
-			// TODO: spawn projectile
+			ShootWeapon_SpawnProjectile(info);
 			
 			if (!info.autoFire || !_triggerFinger) {
 				Timer timer = Timer.CreateCountdown(ResetShootTriggers, info.shootTime, repeating: info.autoFire);
@@ -228,16 +249,70 @@ namespace TowerDefense.Player {
 				_timers.AddTimer(timer);
 			}
 
+			ShootWeapon_SetAnimators();
+
+			_triggerFinger = true;
+		}
+
+		private void ShootWeapon_SpawnProjectile(Weapon info) {
+			// Ensure that the prefab for the projectile has been set
+			_projectileCreator.SetPrefab(info.projectilePrefab);
+
+			GameObject projectile = _projectileCreator.Get();
+
+			if (projectile) {
+				projectile.transform.SetPositionAndRotation(_camera.GetFirstPersonTarget(), _camera.GetFirstPersonLookRotation());
+
+				if (projectile.TryGetComponent(out RaycastBullet bullet)) {
+					CheckRaycast(info, bullet);
+					return;
+				}
+			}
+		}
+
+		private void CheckRaycast(Weapon info, RaycastBullet bullet) {
+			Vector3 origin = bullet.transform.position;
+			Quaternion rotation = bullet.transform.rotation;
+
+			// Apply spread to the bullet
+			if (info.spread > 0 && _triggerFinger) {
+				rotation *= Quaternion.Euler(Random.Range(-info.spread, info.spread), Random.Range(-info.spread, info.spread), 0);
+				bullet.transform.rotation = rotation;
+			}
+
+			Vector3 forward = rotation * Vector3.forward;
+			Vector3 end = origin + forward * bullet.Range;
+
+			// Check if the raycast hits anything
+			Ray ray = new Ray(origin, forward);
+			if (Physics.Raycast(ray, out RaycastHit hit, bullet.Range, gameObject.layer.ToLayerMask().Exclusion())) {
+				end = hit.point;
+
+				GameObject hitObject = hit.collider.gameObject;
+
+				// TODO: apply damage to the hit object
+			}
+
+			// If there isn't a line of sight from where the projectile actually spawns and where the trail starts, destroy the projectile
+			// This is to prevent the trail from being visible through walls
+			if (Physics.Linecast(origin, info.projectileOrigin.position, gameObject.layer.ToLayerMask().Exclusion())) {
+				bullet.GetComponent<PooledObject>().ReturnToPool();
+				return;
+			}
+
+			bullet.trailStart = info.projectileOrigin.position;
+			bullet.trailEnd = end;
+		}
+
+		private void ShootWeapon_SetAnimators() {
 			if (_firstPersonAnimator)
 				_firstPersonAnimator.SetTrigger("shoot");
 
 			if (_thirdPersonAnimator)
 				_thirdPersonAnimator.SetTrigger("shoot");
-
-			_triggerFinger = true;
 		}
 
-		private void ResetShootTriggers() {
+		private void ResetShootTriggers(Timer timer) {
 			_hasShootCooldown = false;
 
 			if (_firstPersonAnimator)
@@ -248,11 +323,16 @@ namespace TowerDefense.Player {
 
 			// If the weapon autofires, check the input and shoot again
 			// Checking in Update may be too late
-			Weapon info = database.GetWeaponInfo(_currentWeapon);
+			Weapon info = (_camera.firstPerson ? _firstPersonWeaponObject : _weaponObject).GetComponent<Weapon>();
 
 			if (info.autoFire && CanShootWeapon()) {
+				ShootWeapon_SpawnProjectile(info);
+				ShootWeapon_SetAnimators();
+				_hasShootCooldown = true;
 				_triggerFinger = true;
-				ShootWeapon();
+			} else {
+				_timers.RemoveTimer(timer);
+				_triggerFinger = false;
 			}
 		}
 
@@ -299,7 +379,7 @@ namespace TowerDefense.Player {
 			if (info) {
 				// Attach the weapon to the right hand bone
 				Transform rightHand = _thirdPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
-				info.rightHandBone.transform.SetParent(rightHand, false);
+				info.rightHandBone.SetParent(rightHand, false);
 
 				// The player is right-handed, so only the left hand needs to be set up for IK
 			//	_leftHandIKTarget = info.leftHandBone;
@@ -310,7 +390,7 @@ namespace TowerDefense.Player {
 			if (info) {
 				// Attach the weapon to the right hand bone
 				Transform rightHand = _firstPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
-				info.rightHandBone.transform.SetParent(rightHand, false);
+				info.rightHandBone.SetParent(rightHand, false);
 
 				// The player is right-handed, so only the left hand needs to be set up for IK
 			//	_firstPersonLeftHandIKTarget = info.leftHandBone;

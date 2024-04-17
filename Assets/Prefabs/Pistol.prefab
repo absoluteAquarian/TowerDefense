@@ -78,11 +78,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   model: {fileID: 7761379277576231337}
-  rightHandBone: {fileID: 7113673403389670413}
+  rightHandBone: {fileID: 4345033905793970846}
   deployShowTime: 0.2
   holsterHideTime: 0.3
   shootAnimationMultiplier: 3.5
-  shootTime: 0.125
+  shootTime: 0.1667
+  autoFire: 1
+  spread: 10
+  projectilePrefab: {fileID: 710789882229869826, guid: 3048a67ad9ba2484080b37b64a3452f7, type: 3}
+  projectileOrigin: {fileID: 4491586127011210831}
 --- !u!1001 &7454755379106243832
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -140,6 +144,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4006d56621b11234e9b0144f28f29a8f, type: 3}
+--- !u!4 &4491586127011210831 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6422640277585658551, guid: 4006d56621b11234e9b0144f28f29a8f, type: 3}
+  m_PrefabInstance: {fileID: 7454755379106243832}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6989065420111217427 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4006d56621b11234e9b0144f28f29a8f, type: 3}

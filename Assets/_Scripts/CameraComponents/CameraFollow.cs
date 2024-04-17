@@ -292,7 +292,9 @@ namespace TowerDefense.CameraComponents {
 			HandleCameraRotation_RotateTarget();
 		}
 
-		private Quaternion GetThirdPersonLookRotation() {
+		public Quaternion GetFirstPersonLookRotation() => Quaternion.Euler(_view.ViewRotation);
+
+		public Quaternion GetThirdPersonLookRotation() {
 			// Raycast from the look anchor in the direction of the view rotation
 			// If the ray hits anything, then the rotation will be adjusted to face the hit point
 			// Otherwise, the rotation will be adjusted to face the view rotation

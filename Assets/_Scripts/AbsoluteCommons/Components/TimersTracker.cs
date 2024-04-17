@@ -36,7 +36,7 @@ namespace AbsoluteCommons.Components {
 			_knownTimers.Add(timer.uniqueID, index);
 
 			if (!timer.repeating)
-				new DestroyTimerOnCompletion(this, timer).Track();
+				timer.OnComplete += RemoveTimer;
 		}
 
 		public void RemoveTimer(Timer timer) {
@@ -71,20 +71,6 @@ namespace AbsoluteCommons.Components {
 			if (Application.isEditor)
 				_timersList = _timers.Enumerate(_indices).ToArray();
 		}
-
-		private class DestroyTimerOnCompletion {
-			private readonly TimersTracker _tracker;
-			private readonly Timer _timer;
-
-			public DestroyTimerOnCompletion(TimersTracker tracker, Timer timer) {
-				_tracker = tracker;
-				_timer = timer;
-			}
-
-			internal void Track() => _timer.OnComplete += Destroy;
-
-			public void Destroy() => _tracker.RemoveTimer(_timer);
-		}
 	}
 
 	[Serializable, Inspectable]
@@ -107,7 +93,7 @@ namespace AbsoluteCommons.Components {
 		internal bool isTracked;
 		private readonly bool decrement;
 		
-		internal event Action OnComplete;
+		internal event Action<Timer> OnComplete;
 
 		public long ID => uniqueID;
 
@@ -117,7 +103,7 @@ namespace AbsoluteCommons.Components {
 
 		public bool IsRepeating => repeating;
 
-		private Timer(float initial, float target, bool repeating, Action onComplete) {
+		private Timer(float initial, float target, bool repeating, Action<Timer> onComplete) {
 			if (initial == target)
 				throw new ArgumentException("Initial and target values cannot be equal");
 
@@ -129,19 +115,19 @@ namespace AbsoluteCommons.Components {
 			OnComplete += onComplete;
 		}
 
-		public static Timer CreateCountup(Action onCompleted, float target, bool repeating = false) {
+		public static Timer CreateCountup(Action<Timer> onCompleted, float target, bool repeating = false) {
 			return new Timer(0, target, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountup(Action onCompleted, float initial, float target, bool repeating = false) {
+		public static Timer CreateCountup(Action<Timer> onCompleted, float initial, float target, bool repeating = false) {
 			return new Timer(initial, target, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountdown(Action onCompleted, float initial, bool repeating = false) {
+		public static Timer CreateCountdown(Action<Timer> onCompleted, float initial, bool repeating = false) {
 			return new Timer(initial, 0, repeating, onCompleted);
 		}
 
-		public static Timer CreateCountdown(Action onCompleted, float initial, float target, bool repeating = false) {
+		public static Timer CreateCountdown(Action<Timer> onCompleted, float initial, float target, bool repeating = false) {
 			return new Timer(initial, target, repeating, onCompleted);
 		}
 
@@ -183,13 +169,13 @@ namespace AbsoluteCommons.Components {
 				while (HasTargetBeenReached()) {
 					// Allow any excess time to be carried over to the next iteration
 					_current -= target - initial;
-					OnComplete?.Invoke();
+					OnComplete?.Invoke(this);
 				}
 			} else if (HasTargetBeenReached()) {
 				// The non-repeating timer has finished
 				_current = target;
 				_state = State.Completed;
-				OnComplete?.Invoke();
+				OnComplete?.Invoke(this);
 			}
 		}
 	}

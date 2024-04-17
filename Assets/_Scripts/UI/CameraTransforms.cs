@@ -24,8 +24,8 @@ namespace TowerDefense.UI {
 
 		// Update is called once per frame
 		void Update() {
-			// Get the "Player" object
-			GameObject player = GameObject.Find("Player");
+			// Get the "ClientPlayer" object
+			GameObject player = GameObject.Find("ClientPlayer");
 
 			// Get the "CameraFollow" component of the main camera
 			CameraFollow view = Camera.main.GetComponent<CameraFollow>();

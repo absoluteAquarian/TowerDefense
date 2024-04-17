@@ -59,8 +59,11 @@ namespace TowerDefense.CameraComponents {
 
 			Cursor.visible = !_lockedCamera;
 
-			if (!_lockedCamera)
+			if (!_lockedCamera) {
+				_rotationDirectionHorizontal = 0;
+				_rotationDirectionVertical = 0;
 				return;
+			}
 
 			switch (axes) {
 				case Axes.MouseXAndY:
