@@ -3,15 +3,18 @@ using AbsoluteCommons.Components;
 using AbsoluteCommons.Objects;
 using AbsoluteCommons.Utility;
 using TowerDefense.CameraComponents;
+using TowerDefense.Networking;
 using TowerDefense.Weapons;
 using TowerDefense.Weapons.Projectiles;
+using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace TowerDefense.Player {
 	[AddComponentMenu("Player/Player Weapon Info")]
-	[RequireComponent(typeof(TimersTracker), typeof(DynamicObjectPool))]
-	public class PlayerWeaponInfo : MonoBehaviour {
+	[RequireComponent(typeof(TimersTracker), typeof(DynamicObjectPool), typeof(PlayerNetcode))]
+	public class PlayerWeaponInfo : NetworkBehaviour {
 		public WeaponDatabase database;
 
 		private WeaponType _previousWeapon;
@@ -46,9 +49,13 @@ namespace TowerDefense.Player {
 		[SerializeField, ReadOnly] private float _holsterHideTime = 1f;
 
 		private Animator _firstPersonAnimator;
+		private NetworkAnimator _networkFirstPersonAnimator;
 		private Animator _thirdPersonAnimator;
+		private NetworkAnimator _networkThirdPersonAnimator;
 
 		private CameraFollow _camera;
+
+		private PlayerNetcode _netcode;
 
 		[Header("IK Properties")]
 		[SerializeField, ReadOnly] private GameObject _weaponObject;
@@ -59,29 +66,54 @@ namespace TowerDefense.Player {
 	//	[SerializeField, ReadOnly] private GameObject _firstPersonRightHandIKTarget;
 
 		public Weapon GetWeaponObject() {
-			GameObject obj = _camera.firstPerson ? _firstPersonWeaponObject : _weaponObject;
+			GameObject obj = _camera.target.IsObjectOrParentOfObject(gameObject) && _camera.FirstPersonRenderingMode ? _firstPersonWeaponObject : _weaponObject;
 			return obj ? obj.GetComponent<Weapon>() : null;
 		}
 
+		private static int resetTimersAction = -1;
+
 		private void Awake() {
 			// NOTE: the child paths may need to be changed if this script is used in a different project
-			GameObject firstPerson = gameObject.GetChild("Animator/Y Bot Arms");
-			if (firstPerson)
-				_firstPersonAnimator = firstPerson.GetComponent<Animator>();
-			_thirdPersonAnimator = gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
+			_firstPersonAnimator = gameObject.GetChildComponent<Animator>("Animator/Y Bot Arms");
+			_networkFirstPersonAnimator = _firstPersonAnimator != null ? _firstPersonAnimator.GetComponent<NetworkAnimator>() : null;
+			_thirdPersonAnimator = gameObject.GetChildComponent<Animator>("Animator/Y Bot");
+			_networkThirdPersonAnimator = _thirdPersonAnimator != null ? _thirdPersonAnimator.GetComponent<NetworkAnimator>() : null;
 
 			_camera = Camera.main.GetComponent<CameraFollow>();
 
 			_timers = GetComponent<TimersTracker>();
 			_projectileCreator = GetComponent<DynamicObjectPool>();
 
+			if (resetTimersAction == -1)
+				resetTimersAction = TimersTracker.RegisterCompletionAction(ResetShootTriggers);
+
+			_netcode = GetComponent<PlayerNetcode>();
+		}
+
+		/*
+		public override void OnNetworkSpawn() {
+			// First person model isn't needed for other clients
+			// TODO: allow clients to be in first person mode for another player?
+			if (!base.IsOwner) {
+				Destroy(gameObject.GetChild("Animator/Y Bot Arms"));
+
+				// Remove all RenderInFirstPerson components
+				// The component has logic to disable its behavior if the player isn't the local player, so this is just a precaution
+				foreach (RenderInFirstPerson render in gameObject.GetComponentsInChildren<RenderInFirstPerson>(true))
+					Destroy(render);
+
+				_firstPersonAnimator = null;
+				_networkFirstPersonAnimator = null;
+			}
+
+			base.OnNetworkSpawn();
+		}
+		*/
+
+		private void Start() {
 			// SetWeapon is responsible for initializing the animators and certain animation-related properties
 			SetWeapon(_currentWeapon);
 			_previousWeapon = _currentWeapon;
-		}
-
-		private void Start() {
-		//	DeployWeapon();
 		}
 
 		private void Update() {
@@ -109,9 +141,9 @@ namespace TowerDefense.Player {
 					DestroyWeaponObject();
 			}
 
-			if (Input.GetButtonDown("Deploy Weapon"))
+			if (ClientInput.IsTriggered("Deploy Weapon"))
 				DeployWeapon();
-			else if (Input.GetButtonDown("Holster Weapon"))
+			else if (ClientInput.IsTriggered("Holster Weapon"))
 				HolsterWeapon();
 			
 			if (CanShootWeapon())
@@ -173,11 +205,11 @@ namespace TowerDefense.Player {
 				_playWeaponAnimation = false;
 				InitWeaponObject();
 				
-				if (_firstPersonAnimator)
-					_firstPersonAnimator.ForceTrigger("immediateDeployWeapon");
+				if (_networkFirstPersonAnimator)
+					_networkFirstPersonAnimator.ForceTrigger("immediateDeployWeapon");
 
-				if (_thirdPersonAnimator)
-					_thirdPersonAnimator.ForceTrigger("immediateDeployWeapon");
+				if (_networkThirdPersonAnimator)
+					_networkThirdPersonAnimator.ForceTrigger("immediateDeployWeapon");
 
 				return;
 			}
@@ -189,11 +221,11 @@ namespace TowerDefense.Player {
 			_transitionTime = 0.0f;
 			_playWeaponAnimation = true;
 
-			if (_firstPersonAnimator)
-				_firstPersonAnimator.SetTrigger("deployWeapon");
+			if (_networkFirstPersonAnimator)
+				_networkFirstPersonAnimator.SetTrigger("deployWeapon");
 
-			if (_thirdPersonAnimator)
-				_thirdPersonAnimator.SetTrigger("deployWeapon");
+			if (_networkThirdPersonAnimator)
+				_networkThirdPersonAnimator.SetTrigger("deployWeapon");
 		}
 
 		public void HolsterWeapon(bool immediate = false) {
@@ -209,11 +241,11 @@ namespace TowerDefense.Player {
 				_playWeaponAnimation = false;
 				DestroyWeaponObject();
 
-				if (_firstPersonAnimator)
-					_firstPersonAnimator.ForceTrigger("immediateHolsterWeapon");
+				if (_networkFirstPersonAnimator)
+					_networkFirstPersonAnimator.ForceTrigger("immediateHolsterWeapon");
 
-				if (_thirdPersonAnimator)
-					_thirdPersonAnimator.ForceTrigger("immediateHolsterWeapon");
+				if (_networkThirdPersonAnimator)
+					_networkThirdPersonAnimator.ForceTrigger("immediateHolsterWeapon");
 
 				return;
 			}
@@ -222,11 +254,11 @@ namespace TowerDefense.Player {
 			_transitionTime = 0.0f;
 			_playWeaponAnimation = true;
 
-			if (_firstPersonAnimator)
-				_firstPersonAnimator.SetTrigger("holsterWeapon");
+			if (_networkFirstPersonAnimator)
+				_networkFirstPersonAnimator.SetTrigger("holsterWeapon");
 
-			if (_thirdPersonAnimator)
-				_thirdPersonAnimator.SetTrigger("holsterWeapon");
+			if (_networkThirdPersonAnimator)
+				_networkThirdPersonAnimator.SetTrigger("holsterWeapon");
 		}
 
 		private bool CanShootWeapon() {
@@ -236,9 +268,9 @@ namespace TowerDefense.Player {
 			Weapon info = database.GetWeaponInfo(_currentWeapon);
 
 			if (!info.autoFire)
-				return Input.GetButtonDown("Fire");
+				return ClientInput.IsTriggered("Fire");
 
-			return Input.GetButton("Fire");
+			return ClientInput.IsPressed("Fire");
 		}
 
 		private void ShootWeapon() {
@@ -246,10 +278,10 @@ namespace TowerDefense.Player {
 
 			Weapon info = GetWeaponObject();
 
-			ShootWeapon_SpawnProjectile(info);
+			ShootWeapon_HandleSpawnNetworking();
 			
 			if (!info.autoFire || !_triggerFinger) {
-				Timer timer = Timer.CreateCountdown(ResetShootTriggers, info.shootTime, repeating: info.autoFire);
+				Timer timer = Timer.CreateCountdown(resetTimersAction, info.shootTime, repeating: info.autoFire);
 				timer.Start();
 
 				_timers.AddTimer(timer);
@@ -257,88 +289,123 @@ namespace TowerDefense.Player {
 
 			ShootWeapon_SetAnimators();
 
-			_triggerFinger = true;
+			_triggerFinger = info.autoFire;
 		}
 
-		private void ShootWeapon_SpawnProjectile(Weapon info) {
+		// TODO: RPCs should sync a struct telling the WeaponType, the position vector and rotation quaternion (syncing the entire GameObject is unreliable)
+
+		private void ShootWeapon_HandleSpawnNetworking() {
+			if (!IsOwner)
+				return;
+
+			if (IsServer)
+				ShootWeapon_SpawnProjectile(CreateSpawnMessage());
+			else
+				RequestProjectileSpawnServerRpc();
+		}
+
+		[ServerRpc]
+		private void RequestProjectileSpawnServerRpc() {
+			SpawnProjectileClientRpc();
+		}
+
+		[ClientRpc]
+		private void SpawnProjectileClientRpc() {
+			if (!base.IsOwner)
+				ShootWeapon_SpawnProjectile(CreateSpawnMessage());
+		}
+
+		private ProjectileSpawnMessage CreateSpawnMessage() {
+			Weapon info = GetWeaponObject();
+			return new ProjectileSpawnMessage(_currentWeapon, info.projectileOrigin.position, info.projectileOrigin.rotation, !_triggerFinger ? 0 : info.spread);
+		}
+
+		private void ShootWeapon_SpawnProjectile(ProjectileSpawnMessage msg) {
 			// Ensure that the prefab for the projectile has been set
-			_projectileCreator.SetPrefab(info.projectilePrefab);
+			_projectileCreator.SetPrefab(database.GetWeaponInfo(msg.weaponType).projectilePrefab);
 
 			GameObject projectile = _projectileCreator.Get();
 
 			if (projectile) {
-				projectile.transform.SetPositionAndRotation(_camera.GetFirstPersonTarget(), _camera.GetFirstPersonLookRotation());
+				projectile.transform.SetPositionAndRotation(_netcode.FirstPersonCameraTarget, _netcode.FirstPersonLookRotation);
 
 				if (projectile.TryGetComponent(out RaycastBullet bullet)) {
-					CheckRaycast(info, bullet);
+					CheckRaycast(msg, bullet);
 					return;
 				}
 			}
 		}
 
-		private void CheckRaycast(Weapon info, RaycastBullet bullet) {
+		private void CheckRaycast(ProjectileSpawnMessage msg, RaycastBullet bullet) {
+			Weapon info = database.GetWeaponInfo(msg.weaponType);
+
 			Vector3 origin = bullet.transform.position;
 			Quaternion rotation = bullet.transform.rotation;
 
 			// Apply spread to the bullet
 			if (info.spread > 0 && _triggerFinger) {
-				rotation *= Quaternion.Euler(Random.Range(-info.spread, info.spread), Random.Range(-info.spread, info.spread), 0);
+				rotation *= Quaternion.Euler(msg.weaponSpread.x, msg.weaponSpread.y, 0);
 				bullet.transform.rotation = rotation;
 			}
 
 			Vector3 forward = rotation * Vector3.forward;
 			Vector3 end = origin + forward * bullet.Range;
 
-			// Check if the raycast hits anything
-			Ray ray = new Ray(origin, forward);
-			if (Physics.Raycast(ray, out RaycastHit hit, bullet.Range, gameObject.layer.ToLayerMask().Exclusion())) {
-				end = hit.point;
+			// Only the server should check for raycasts; any interactions will be forwarded to the clients
+			if (base.IsServer) {
+				// Check if the raycast hits anything
+				Ray ray = new Ray(origin, forward);
+				if (Physics.Raycast(ray, out RaycastHit hit, bullet.Range, gameObject.layer.ToLayerMask().Exclusion())) {
+					end = hit.point;
 
-				GameObject hitObject = hit.collider.gameObject;
+					GameObject hitObject = hit.collider.gameObject;
 
-				// TODO: apply damage to the hit object
+					// TODO: apply damage to the hit object
+				}
 			}
 
 			// If there isn't a line of sight from where the projectile actually spawns and where the trail starts, destroy the projectile
 			// This is to prevent the trail from being visible through walls
-			if (Physics.Linecast(origin, info.projectileOrigin.position, gameObject.layer.ToLayerMask().Exclusion())) {
+			if (Physics.Linecast(origin, msg.weaponPosition, gameObject.layer.ToLayerMask().Exclusion())) {
 				bullet.GetComponent<PooledObject>().ReturnToPool();
 				return;
 			}
 
-			bullet.trailStart = info.projectileOrigin.position;
+			bullet.trailStart = msg.weaponPosition;
 			bullet.trailEnd = end;
 		}
 
 		private void ShootWeapon_SetAnimators() {
-			if (_firstPersonAnimator)
-				_firstPersonAnimator.SetTrigger("shoot");
+			if (_networkFirstPersonAnimator)
+				_networkFirstPersonAnimator.SetTrigger("shoot");
 
-			if (_thirdPersonAnimator)
-				_thirdPersonAnimator.SetTrigger("shoot");
+			if (_networkThirdPersonAnimator)
+				_networkThirdPersonAnimator.SetTrigger("shoot");
 		}
 
-		private void ResetShootTriggers(Timer timer) {
-			_hasShootCooldown = false;
+		private static void ResetShootTriggers(GameObject obj, Timer timer) {
+			PlayerWeaponInfo self = obj.GetComponent<PlayerWeaponInfo>();
 
-			if (_firstPersonAnimator)
-				_firstPersonAnimator.ResetTrigger("shoot");
+			self._hasShootCooldown = false;
 
-			if (_thirdPersonAnimator)
-				_thirdPersonAnimator.ResetTrigger("shoot");
+			if (self._networkFirstPersonAnimator)
+				self._networkFirstPersonAnimator.ResetTrigger("shoot");
+
+			if (self._networkThirdPersonAnimator)
+				self._networkThirdPersonAnimator.ResetTrigger("shoot");
 
 			// If the weapon autofires, check the input and shoot again
 			// Checking in Update may be too late
-			Weapon info = (_camera.firstPerson ? _firstPersonWeaponObject : _weaponObject).GetComponent<Weapon>();
+			Weapon info = self.GetWeaponObject();
 
-			if (info.autoFire && CanShootWeapon()) {
-				ShootWeapon_SpawnProjectile(info);
-				ShootWeapon_SetAnimators();
-				_hasShootCooldown = true;
-				_triggerFinger = true;
+			if (info.autoFire && self.CanShootWeapon()) {
+				self._triggerFinger = true;
+				self.ShootWeapon_HandleSpawnNetworking();
+				self.ShootWeapon_SetAnimators();
+				self._hasShootCooldown = true;
 			} else {
-				_timers.RemoveTimer(timer);
-				_triggerFinger = false;
+				self._timers.RemoveTimer(timer);
+				self._triggerFinger = false;
 			}
 		}
 
@@ -381,26 +448,14 @@ namespace TowerDefense.Player {
 				return;
 
 			_weaponObject = database.InstantiateWeapon(_displayedWeapon);
+			AttachWeaponToHand();
+
+			if (base.IsOwner) {
+				_firstPersonWeaponObject = database.InstantiateWeapon(_displayedWeapon, clientside: true);
+				AttachWeaponToFirstPersonHand();
+			}
+
 			Weapon info = _weaponObject.GetComponent<Weapon>();
-			if (info) {
-				// Attach the weapon to the right hand bone
-				Transform rightHand = _thirdPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
-				info.rightHandBone.SetParent(rightHand, false);
-
-				// The player is right-handed, so only the left hand needs to be set up for IK
-			//	_leftHandIKTarget = info.leftHandBone;
-			}
-
-			_firstPersonWeaponObject = database.InstantiateWeapon(_displayedWeapon);
-			info = _firstPersonWeaponObject.GetComponent<Weapon>();
-			if (info) {
-				// Attach the weapon to the right hand bone
-				Transform rightHand = _firstPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
-				info.rightHandBone.SetParent(rightHand, false);
-
-				// The player is right-handed, so only the left hand needs to be set up for IK
-			//	_firstPersonLeftHandIKTarget = info.leftHandBone;
-			}
 
 			if (_firstPersonAnimator)  {
 				_firstPersonAnimator.SetBool("weaponDeployed", true);
@@ -413,12 +468,42 @@ namespace TowerDefense.Player {
 			}
 		}
 
+		private void AttachWeaponToHand() {
+			if (!_weaponObject)
+				return;
+
+			Weapon info = _weaponObject.GetComponent<Weapon>();
+			if (info) {
+				// Attach the weapon to the right hand bone
+				Transform rightHand = _thirdPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
+				info.rightHandBone.SetParent(rightHand, false);
+
+				// The player is right-handed, so only the left hand needs to be set up for IK
+			//	_leftHandIKTarget = info.leftHandBone;
+			}
+		}
+
+		private void AttachWeaponToFirstPersonHand() {
+			if (!_firstPersonWeaponObject)
+				return;
+
+			Weapon info = _firstPersonWeaponObject.GetComponent<Weapon>();
+			if (info) {
+				// Attach the weapon to the right hand bone
+				Transform rightHand = _firstPersonAnimator.GetBoneTransform(HumanBodyBones.RightHand);
+				info.rightHandBone.SetParent(rightHand, false);
+
+				// The player is right-handed, so only the left hand needs to be set up for IK
+			//	_firstPersonLeftHandIKTarget = info.leftHandBone;
+			}
+		}
+
 		private void DestroyWeaponObject() {
 			_displayedWeapon = WeaponType.None;
 			_deployState = DeployState.Holstered;
 
-			TypeExtensions.DestroyAndSetNull(ref _weaponObject);
-			TypeExtensions.DestroyAndSetNull(ref _firstPersonWeaponObject);
+			TypeExtensions.DestroyOrDespawnAndSetNull(ref _weaponObject);
+			TypeExtensions.DestroyOrDespawnAndSetNull(ref _firstPersonWeaponObject);
 		//	TypeExtensions.DestroyAndSetNull(ref _leftHandIKTarget);
 		//	TypeExtensions.DestroyAndSetNull(ref _firstPersonLeftHandIKTarget);
 		//	TypeExtensions.DestroyAndSetNull(ref _rightHandIKTarget);
@@ -429,6 +514,79 @@ namespace TowerDefense.Player {
 
 			if (_thirdPersonAnimator)
 				_thirdPersonAnimator.SetBool("weaponDeployed", false);
+		}
+
+		// Networking stuff
+		private struct ProjectileSpawnMessage : INetworkSerializable {
+			public WeaponType weaponType;
+			public Vector3 weaponPosition;
+			public Quaternion weaponRotation;
+			public Vector2 weaponSpread;
+
+			public ProjectileSpawnMessage(WeaponType weaponType, Vector3 weaponPosition, Quaternion weaponRotation, float weaponSpread) {
+				this.weaponType = weaponType;
+				this.weaponPosition = weaponPosition;
+				this.weaponRotation = weaponRotation;
+				this.weaponSpread = weaponSpread > 0 ? new Vector2(Random.Range(-weaponSpread, weaponSpread), Random.Range(-weaponSpread, weaponSpread)) : Vector2.zero;
+			}
+
+			public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter {
+				if (serializer.IsWriter) {
+					var writer = serializer.GetFastBufferWriter();
+
+					writer.WriteValueSafe(weaponType);
+					writer.WriteValueSafe(weaponPosition);
+					writer.WriteValueSafe(weaponRotation);
+					writer.WriteValueSafe(weaponSpread);
+				} else {
+					var reader = serializer.GetFastBufferReader();
+
+					reader.ReadValueSafe(out weaponType);
+					reader.ReadValueSafe(out weaponPosition);
+					reader.ReadValueSafe(out weaponRotation);
+					reader.ReadValueSafe(out weaponSpread);
+				}
+			}
+		}
+
+		protected override void OnSynchronize<T>(ref BufferSerializer<T> serializer) {
+			if (serializer.IsWriter) {
+				var writer = serializer.GetFastBufferWriter();
+				writer.WriteValueSafe(_currentWeapon);
+				writer.WriteValueSafe(_previousWeapon);
+				writer.WriteValueSafe(_displayedWeapon);
+				writer.WriteValueSafe(_deployState);
+				writer.WriteValueSafe(_transitionTime);
+				writer.WriteValueSafe(_deployShowTime);
+				writer.WriteValueSafe(_holsterHideTime);
+
+				using (var bitWriter = writer.EnterBitwiseContext()) {
+					bitWriter.TryBeginWriteBits(3);
+
+					bitWriter.WriteBit(_hasShootCooldown);
+					bitWriter.WriteBit(_triggerFinger);
+					bitWriter.WriteBit(_playWeaponAnimation);
+				}
+			} else {
+				var reader = serializer.GetFastBufferReader();
+				reader.ReadValueSafe(out _currentWeapon);
+				reader.ReadValueSafe(out _previousWeapon);
+				reader.ReadValueSafe(out _displayedWeapon);
+				reader.ReadValueSafe(out _deployState);
+				reader.ReadValueSafe(out _transitionTime);
+				reader.ReadValueSafe(out _deployShowTime);
+				reader.ReadValueSafe(out _holsterHideTime);
+
+				using (var bitReader = reader.EnterBitwiseContext()) {
+					bitReader.TryBeginReadBits(3);
+
+					bitReader.ReadBit(out _hasShootCooldown);
+					bitReader.ReadBit(out _triggerFinger);
+					bitReader.ReadBit(out _playWeaponAnimation);
+				}
+			}
+
+			base.OnSynchronize(ref serializer);
 		}
 
 		// TODO: none of this works.  too lazy to fix it right now though

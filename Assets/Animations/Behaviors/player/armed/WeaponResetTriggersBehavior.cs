@@ -1,3 +1,4 @@
+using AbsoluteCommons.Utility;
 using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player.Armed {
@@ -10,16 +11,16 @@ namespace TowerDefense.Animations.Behaviors.Player.Armed {
 		// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 		public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			if (resetDeployTrigger)
-				animator.ResetTrigger("deployWeapon");
+				animator.NetResetTriggerSafely("deployWeapon");
 
 			if (resetDeployImmediateTrigger)
-				animator.ResetTrigger("immediateDeployWeapon");
+				animator.NetResetTriggerSafely("immediateDeployWeapon");
 
 			if (resetHolsterTrigger)
-				animator.ResetTrigger("holsterWeapon");
+				animator.NetResetTriggerSafely("holsterWeapon");
 
 			if (resetHolsterImmediateTrigger)
-				animator.ResetTrigger("immediateHolsterWeapon");
+				animator.NetResetTriggerSafely("immediateHolsterWeapon");
 		}
 
 		// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks

@@ -1,3 +1,4 @@
+using AbsoluteCommons.Utility;
 using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
@@ -5,7 +6,7 @@ namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 		// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 		public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			// Reset the trigger
-			animator.ResetTrigger("playMovingIdle");
+			animator.NetResetTriggerSafely("playMovingIdle");
 		}
 
 		// OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks

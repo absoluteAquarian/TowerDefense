@@ -1,6 +1,8 @@
 ﻿using AbsoluteCommons.Attributes;
+using AbsoluteCommons.Collections;
 using AbsoluteCommons.Objects;
 using System.Collections;
+using System.Collections.Concurrent;
 using UnityEngine;
 
 namespace AbsoluteCommons.Components {
@@ -13,10 +15,19 @@ namespace AbsoluteCommons.Components {
 		[SerializeField, ReadOnly] private DynamicObjectPool _trailPool;
 		private WaitForSeconds _destroyDelay;
 
+		// Used to force any leftover trails to despawn when the object is being destroyed
+		private FreeList<TrailRenderer> _activeTrails = new();
+		private SparseSet _knownActiveIndices = new(16);
+		private ConcurrentBag<int> _queuedTrailRemovals = new();
+
 		private void Awake() {
 			_trailPool = GetComponent<DynamicObjectPool>();
 
 			_destroyDelay = new WaitForSeconds(_trailPrefab.time);
+		}
+
+		private void LateUpdate() {
+			CheckRemovalQueue();
 		}
 
 		public void CreateTrail(Ray ray, LayerMask collisionMask, float distance = 100f) {
@@ -48,10 +59,13 @@ namespace AbsoluteCommons.Components {
 
 			trail.enabled = true;
 
-			StartCoroutine(SpawnTrailBits(trail, end));
+			int index = _activeTrails.Insert(trail);
+			_knownActiveIndices.Add(index);
+
+			StartCoroutine(SpawnTrailBits(trail, end, index));
 		}
 
-		private IEnumerator SpawnTrailBits(TrailRenderer trail, Vector3 end) {
+		private IEnumerator SpawnTrailBits(TrailRenderer trail, Vector3 end, int activeIndex) {
 			Vector3 start = trail.transform.position;
 			float distance = Vector3.Distance(start, end);
 			float remainingDistance = distance;
@@ -68,6 +82,27 @@ namespace AbsoluteCommons.Components {
 
 			trail.enabled = false;
 			trail.gameObject.GetComponent<PooledObject>().ReturnToPool();
+
+			_queuedTrailRemovals.Add(activeIndex);
+		}
+
+		private void OnDestroy() {
+			// Forcibly despawn any remaining trails
+			foreach (int index in _knownActiveIndices)
+				_queuedTrailRemovals.Add(index);
+
+			CheckRemovalQueue();
+		}
+
+		private void CheckRemovalQueue() {
+			while (_queuedTrailRemovals.TryTake(out int index)) {
+				TrailRenderer trail = _activeTrails[index];
+				trail.enabled = false;
+				trail.gameObject.GetComponent<PooledObject>().ReturnToPool();
+
+				_activeTrails.Remove(index);
+				_knownActiveIndices.Remove(index);
+			}
 		}
 	}
 }

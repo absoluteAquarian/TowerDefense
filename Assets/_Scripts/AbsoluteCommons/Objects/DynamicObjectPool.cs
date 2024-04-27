@@ -1,11 +1,13 @@
 ﻿using AbsoluteCommons.Attributes;
+using AbsoluteCommons.Utility;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace AbsoluteCommons.Objects {
 	[AddComponentMenu("Absolute Commons/Objects/Dynamic Object Pool")]
-	public class DynamicObjectPool : MonoBehaviour {
+	public class DynamicObjectPool : NetworkBehaviour {
 		[SerializeField, ReadOnly] private GameObject _prefab;
 		[SerializeField] private int _initialCapacity = 10;
 		[SerializeField] private bool _showPoolInHierarchy = false;
@@ -23,15 +25,30 @@ namespace AbsoluteCommons.Objects {
 			_container = new GameObject("Dynamic Pool") {
 				hideFlags = _showPoolInHierarchy ? HideFlags.None : HideFlags.HideInHierarchy
 			};
-			_container.transform.SetParent(transform, false);
+			_container.AddComponent<NetworkObject>();
 
 			// Make a global pool for objects in the world
 			// This is just so they don't clutter the scene list
-			if (Application.isEditor && _visibleObjectContainer == null) {
+			if (Application.isEditor && !_visibleObjectContainer) {
 				_visibleObjectContainer = new GameObject("Visible Dynamic Pool Objects");
-				_visibleObjectContainer.transform.SetParent(null, false);
-				_visibleObjectContainer.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+				_visibleObjectContainer.AddComponent<NetworkObject>();
 			}
+		}
+
+		public override void OnNetworkSpawn() {
+			if (base.IsServer) {
+				NetworkObject netContainer = _container.GetComponent<NetworkObject>();
+				if (!netContainer.IsSpawned)
+					netContainer.SmartSpawn(true);
+
+				netContainer = _visibleObjectContainer.GetComponent<NetworkObject>();
+				if (!netContainer.IsSpawned)
+					netContainer.SmartSpawn(false);
+
+				_container.transform.SetParent(transform, false);
+			}
+
+			base.OnNetworkSpawn();
 		}
 
 		public void SetPrefab(GameObject prefab) {
@@ -46,8 +63,13 @@ namespace AbsoluteCommons.Objects {
 		public void SetPrefab<T>(T prefab) where T : Component => SetPrefab(prefab.gameObject);
 
 		public GameObject Get() {
+			if (!base.IsServer) {
+				Debug.LogError("[DynamicObjectPool] Get() can only be called on the server");
+				return null;
+			}
+
 			if (_prefab == null) {
-				Debug.LogError("DynamicObjectPool: No prefab set");
+				Debug.LogError("[DynamicObjectPool] No prefab set");
 				return null;
 			}
 
@@ -65,23 +87,38 @@ namespace AbsoluteCommons.Objects {
 		}
 
 		private GameObject PrepareObject(GameObject obj) {
-			if (obj == null || _dirty[_index]) {
+			if (!obj || _dirty[_index]) {
 				// A new object is needed since the prefab has changed or the object was destroyed
-				if (obj != null)
-					Destroy(obj);
+				if (obj)
+					obj.GetComponent<NetworkObject>().SmartDespawn(true);
 
 				obj = Create();
 
 				_dirty[_index] = false;
-			} else {
-				// Just ensure the connection is still there
-				PooledObject.EnsureConnection(obj, this, _index);
+
+				// Inform clients that the object has changed
+				AddNewObjectClientRpc(obj.GetComponent<NetworkObject>().NetworkObjectId, _index);
 			}
 
 			obj.SetActive(true);
 			obj.transform.SetParent(Application.isEditor ? _visibleObjectContainer.transform : null, true);
 
+			NetworkObject netObj = obj.GetComponent<NetworkObject>();
+			if (!netObj.IsSpawned)
+				netObj.SmartSpawn(true);
+
+			PrepareObjectClientRpc(_index);
+
+			PooledObject.EnsureConnection(obj, this, _index);
+
 			return obj;
+		}
+
+		[ClientRpc]
+		private void PrepareObjectClientRpc(int index) {
+			GameObject obj = _pool[index];
+
+			obj.SetActive(true);
 		}
 
 		private GameObject AddNewObject() {
@@ -89,26 +126,85 @@ namespace AbsoluteCommons.Objects {
 			_pool.Add(newObj);
 			_dirty.Length++;
 			_dirty[_index] = false;
+			AddNewObjectClientRpc(newObj.GetComponent<NetworkObject>().NetworkObjectId, _index);
 			return newObj;
+		}
+
+		[ClientRpc]
+		private void AddNewObjectClientRpc(ulong networkObjectID, int index) {
+			GameObject obj = NetworkManager.Singleton.SpawnManager.SpawnedObjects[networkObjectID].gameObject;
+
+			if (index < _pool.Count)
+				_pool[index] = obj;
+			else
+				_pool.Add(obj);
+
+			if (_dirty.Length <= index)
+				_dirty.Length = index + 1;
+
+			_dirty[index] = false;
 		}
 
 		private GameObject Create() {
 			GameObject obj = Instantiate(_prefab);
-			PooledObject.EnsureConnection(obj, this, _pool.Count);
-			ResetObjectState(obj);
+
+			if (!obj.TryGetComponent(out NetworkObject netObj)) {
+				Debug.LogError("[DynamicObjectPool] Prefab does not have a NetworkObject component");
+				return null;
+			}
+
+			netObj.SmartSpawn(true);
+
 			return obj;
 		}
 
-		private void ResetObjectState(GameObject obj) {
+		[ServerRpc]
+		private void ResetObjectStateServerRpc(int index) {
+			ResetObjectState(_pool[index]);
+
+			ResetObjectStateClientRpc(index);
+		}
+
+		[ClientRpc]
+		private void ResetObjectStateClientRpc(int index) {
+			GameObject obj = _pool[index];
+
 			obj.SetActive(false);
-			obj.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-			obj.transform.SetParent(_container.transform, false);
+		}
+
+		private void ResetObjectState(GameObject obj) {
+			/*
+			NetworkObject netObj = obj.GetComponent<NetworkObject>();
+			if (netObj.IsSpawned)
+				netObj.Despawn(false);
+			*/
+
+			if (!obj)
+				return;
+
+			obj.SetActive(false);
+			obj.transform.SetParent(_container.GetComponent<NetworkObject>().IsSpawned ? _container.transform : null, true);
 		}
 
 		public T Get<T>() where T : Component => Get().GetComponent<T>();
 
-		public void Return(GameObject obj) => ResetObjectState(obj);
+		public void Return(GameObject obj) {
+			obj.SetActive(false);
+
+			if (!base.IsServer && base.IsOwner)
+				ResetObjectStateServerRpc(_pool.IndexOf(obj));
+		}
 
 		public void Return<T>(T component) where T : Component => Return(component.gameObject);
+
+		public override void OnNetworkDespawn() {
+			// Force all objects to despawn
+			if (base.IsServer) {
+				foreach (GameObject obj in _pool) {
+					ResetObjectState(obj);
+					obj.GetComponent<NetworkObject>().SmartDespawn(true);
+				}
+			}
+		}
 	}
 }

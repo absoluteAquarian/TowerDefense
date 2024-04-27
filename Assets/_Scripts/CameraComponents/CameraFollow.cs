@@ -1,6 +1,7 @@
 using AbsoluteCommons.Attributes;
 using AbsoluteCommons.Utility;
 using System;
+using TowerDefense.Player;
 using TowerDefense.UI;
 using UnityEngine;
 using UnityEngine.UIElements.Experimental;
@@ -72,6 +73,9 @@ namespace TowerDefense.CameraComponents {
 		}
 
 		void Update() {
+			if (!target)
+				return;
+
 			CheckTransitionTime();
 
 			CheckCameraMode();
@@ -105,7 +109,7 @@ namespace TowerDefense.CameraComponents {
 
 		private void CheckCameraMode() {
 			// Toggle first person mode
-			if (Input.GetKeyDown(KeyCode.F))
+			if (ClientInput.IsTriggered(KeyCode.F))
 				firstPerson = !firstPerson;
 
 			// Handle starting the transition when changing modes
@@ -165,6 +169,9 @@ namespace TowerDefense.CameraComponents {
 		}
 
 		public Vector3 GetFirstPersonTarget() {
+			if (!target)
+				return transform.position;
+
 			// The camera will attempt to move to a position relative to the target using the camera height
 			Vector3 targetPositionRelative = Vector3.up * firstPersonCameraHeight;
 
@@ -367,6 +374,11 @@ namespace TowerDefense.CameraComponents {
 		}
 
 		public bool CheckCameraRaycast(out RaycastHit hit, float distance = 100) {
+			if (!target) {
+				hit = default;
+				return false;
+			}
+
 			Ray ray = new Ray(_camera.transform.position, Quaternion.Euler(_view.ViewRotation) * Vector3.forward);
 			return Physics.Raycast(ray, out hit, distance, target.layer.ToLayerMask().Exclusion(), QueryTriggerInteraction.Ignore);
 		}

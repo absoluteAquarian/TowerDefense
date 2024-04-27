@@ -1,3 +1,4 @@
+using AbsoluteCommons.Utility;
 using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player {
@@ -40,7 +41,7 @@ namespace TowerDefense.Animations.Behaviors.Player {
 
 		// OnStateMachineExit is called when exiting a state machine via its Exit Node
 		public override void OnStateMachineExit(Animator animator, int stateMachinePathHash) {
-			animator.ResetTrigger("taunting");
+			animator.NetResetTriggerSafely("taunting");
 		}
 	}
 }

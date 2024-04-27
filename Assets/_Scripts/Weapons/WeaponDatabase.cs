@@ -1,6 +1,6 @@
-﻿using AbsoluteCommons.Objects;
-using System.Collections.Generic;
-using TowerDefense.Weapons.Projectiles;
+﻿using AbsoluteCommons.Utility;
+using TowerDefense.Networking;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace TowerDefense.Weapons {
@@ -20,18 +20,12 @@ namespace TowerDefense.Weapons {
 			return prefab.GetComponent<Weapon>();
 		}
 
-		public GameObject InstantiateWeapon(WeaponType weapon) {
-			GameObject prefab = weapons[(int)weapon];
-
-			if (prefab == null) {
-				Debug.LogError($"WeaponDatabase: No weapon found for {weapon}");
-				return null;
-			}
-
-			return Instantiate(prefab);
+		private static void CheckForNetworkSpawn(GameObject obj) {
+			if (obj.TryGetComponent(out NetworkObject netObj))
+				netObj.SmartSpawn(true);
 		}
 
-		public GameObject InstantiateWeapon(WeaponType weapon, Transform parent) {
+		public GameObject InstantiateWeapon(WeaponType weapon, bool clientside = false) {
 			GameObject prefab = weapons[(int)weapon];
 
 			if (prefab == null) {
@@ -39,10 +33,18 @@ namespace TowerDefense.Weapons {
 				return null;
 			}
 
-			return Instantiate(prefab, parent);
+			GameObject obj = Instantiate(prefab);
+
+			/*
+			if (clientside)
+				obj.AddComponent<VisibleOnlyToLocalClient>();
+			*/
+
+			CheckForNetworkSpawn(obj);
+			return obj;
 		}
 
-		public GameObject InstantiateWeapon(WeaponType weapon, Vector3 position, Quaternion rotation) {
+		public GameObject InstantiateWeapon(WeaponType weapon, Transform parent, bool clientside = false) {
 			GameObject prefab = weapons[(int)weapon];
 
 			if (prefab == null) {
@@ -50,10 +52,18 @@ namespace TowerDefense.Weapons {
 				return null;
 			}
 
-			return Instantiate(prefab, position, rotation);
+			GameObject obj = Instantiate(prefab, parent);
+
+			/*
+			if (clientside)
+				obj.AddComponent<VisibleOnlyToLocalClient>();
+			*/
+
+			CheckForNetworkSpawn(obj);
+			return obj;
 		}
 
-		public GameObject InstantiateWeapon(WeaponType weapon, Vector3 position, Quaternion rotation, Transform parent) {
+		public GameObject InstantiateWeapon(WeaponType weapon, Vector3 position, Quaternion rotation, bool clientside = false) {
 			GameObject prefab = weapons[(int)weapon];
 
 			if (prefab == null) {
@@ -61,10 +71,18 @@ namespace TowerDefense.Weapons {
 				return null;
 			}
 
-			return Instantiate(prefab, position, rotation, parent);
+			GameObject obj = Instantiate(prefab, position, rotation);
+
+			/*
+			if (clientside)
+				obj.AddComponent<VisibleOnlyToLocalClient>();
+			*/
+
+			CheckForNetworkSpawn(obj);
+			return obj;
 		}
 
-		public GameObject InstantiateWeapon(WeaponType weapon, Transform parent, bool worldPositionStays) {
+		public GameObject InstantiateWeapon(WeaponType weapon, Vector3 position, Quaternion rotation, Transform parent, bool clientside = false) {
 			GameObject prefab = weapons[(int)weapon];
 
 			if (prefab == null) {
@@ -72,7 +90,34 @@ namespace TowerDefense.Weapons {
 				return null;
 			}
 
-			return Instantiate(prefab, parent, worldPositionStays);
+			GameObject obj = Instantiate(prefab, position, rotation, parent);
+			
+			/*
+			if (clientside)
+				obj.AddComponent<VisibleOnlyToLocalClient>();
+			*/
+
+			CheckForNetworkSpawn(obj);
+			return obj;
+		}
+
+		public GameObject InstantiateWeapon(WeaponType weapon, Transform parent, bool worldPositionStays, bool clientside = false) {
+			GameObject prefab = weapons[(int)weapon];
+
+			if (prefab == null) {
+				Debug.LogError($"WeaponDatabase: No weapon found for {weapon}");
+				return null;
+			}
+
+			GameObject obj = Instantiate(prefab, parent, worldPositionStays);
+			
+			/*
+			if (clientside)
+				obj.AddComponent<VisibleOnlyToLocalClient>();
+			*/
+
+			CheckForNetworkSpawn(obj);
+			return obj;
 		}
 	}
 }

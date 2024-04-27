@@ -1,4 +1,5 @@
 using System;
+using TowerDefense.Player;
 using UnityEngine;
 
 // Code was derived from: https://stackoverflow.com/questions/8465323/unity-fps-rotation-camera
@@ -52,7 +53,7 @@ namespace TowerDefense.CameraComponents {
 
 		// Update is called once per frame
 		void Update() {
-			if (Input.GetKeyDown(KeyCode.Escape)) {
+			if (ClientInput.IsTriggered(KeyCode.Escape)) {
 				_lockedCamera = !_lockedCamera;
 				Cursor.lockState = _lockedCamera ? CursorLockMode.Locked : CursorLockMode.None;
 			}
@@ -80,7 +81,7 @@ namespace TowerDefense.CameraComponents {
 		}
 
 		private void SetRotationX() {
-			float rotation = Input.GetAxis("Mouse Y") * sensitivityY;
+			float rotation = ClientInput.GetRaw("Mouse Y") * sensitivityY;
 
 			_rotationDirectionVertical = Math.Sign(rotation);
 
@@ -89,7 +90,7 @@ namespace TowerDefense.CameraComponents {
 		}
 
 		private void SetRotationY() {
-			float rotation = Input.GetAxis("Mouse X") * sensitivityX;
+			float rotation = ClientInput.GetRaw("Mouse X") * sensitivityX;
 
 			_rotationDirectionHorizontal = Math.Sign(rotation);
 

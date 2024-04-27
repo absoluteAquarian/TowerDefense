@@ -1,13 +1,11 @@
-﻿using AbsoluteCommons.Utility;
-using TowerDefense.CameraComponents;
-using TowerDefense.Weapons;
+﻿using TowerDefense.Networking;
 using UnityEngine;
 
 namespace TowerDefense.Player {
 	[AddComponentMenu("Player/Third Person Model Rotation")]
 	public class ThirdPersonModelRotation : MonoBehaviour {
 		private PlayerWeaponInfo _weaponInfo;
-		private CameraFollow _camera;
+		private PlayerNetcode _netcode;
 
 		private Animator _thirdPersonAnimator;
 
@@ -22,7 +20,7 @@ namespace TowerDefense.Player {
 
 			_thirdPersonAnimator = GetComponent<Animator>();
 
-			_camera = Camera.main.GetComponent<CameraFollow>();
+			_netcode = GetComponentInParent<PlayerNetcode>();
 		}
 
 		private void OnAnimatorIK(int layerIndex) {
@@ -35,12 +33,7 @@ namespace TowerDefense.Player {
 		//	_weaponInfo.HandleThirdPersonIK(_thirdPersonAnimator);
 
 			// Make the player look at the target
-			const float DISTANCE = 100f;
-			Vector3 target;
-			if (_camera.CheckCameraRaycast(out var hit, DISTANCE))
-				target = hit.point;
-			else
-				target = _camera.transform.position + _camera.transform.forward * DISTANCE;
+			Vector3 target = _netcode.ThirdPersonLookTarget;
 
 			_thirdPersonAnimator.SetLookAtPosition(target);
 			_thirdPersonAnimator.SetLookAtWeight(weight: 1,

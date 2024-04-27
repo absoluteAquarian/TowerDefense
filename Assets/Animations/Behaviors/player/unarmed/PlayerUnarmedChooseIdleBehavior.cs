@@ -1,3 +1,4 @@
+using AbsoluteCommons.Utility;
 using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
@@ -19,7 +20,7 @@ namespace TowerDefense.Animations.Behaviors.Player.Unarmed {
 
 				// Choice 0 is the default idle animation, which isn't a moving idle
 				if (random != 0)
-					animator.SetTrigger("playMovingIdle");
+					animator.NetSetTriggerSafely("playMovingIdle");
 			}
 		}
 

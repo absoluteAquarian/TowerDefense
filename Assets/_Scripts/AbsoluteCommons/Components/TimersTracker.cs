@@ -3,7 +3,6 @@ using AbsoluteCommons.Collections;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace AbsoluteCommons.Components {
@@ -18,6 +17,16 @@ namespace AbsoluteCommons.Components {
 
 		private static int _instanceCount;
 
+		// Allows for serializing the completion action across network packets as a simple integer index
+		private static List<Action<GameObject, Timer>> _completionActions = new();
+
+		public static int RegisterCompletionAction(Action<GameObject, Timer> action) {
+			_completionActions.Add(action);
+			return _completionActions.Count - 1;
+		}
+
+		public static Action<GameObject, Timer> GetCompletionAction(int index) => _completionActions[index];
+
 		// Editor stuff
 		[SerializeField, ReadOnly] private Timer[] _timersList = Array.Empty<Timer>();
 
@@ -26,6 +35,7 @@ namespace AbsoluteCommons.Components {
 				throw new ArgumentException("Timer has already been added to a tracker");
 			
 			timer.isTracked = true;
+			timer.owner = gameObject;
 			timer.uniqueID = _instanceCount++;
 			_pendingAdditions.Enqueue(timer);
 		}
@@ -36,8 +46,10 @@ namespace AbsoluteCommons.Components {
 			_knownTimers.Add(timer.uniqueID, index);
 
 			if (!timer.repeating)
-				timer.OnComplete += RemoveTimer;
+				timer.OnComplete += RemoveTimerAutomatically;
 		}
+
+		private static void RemoveTimerAutomatically(GameObject obj, Timer timer) => obj.GetComponent<TimersTracker>().RemoveTimer(timer);
 
 		public void RemoveTimer(Timer timer) {
 			if (!timer.isTracked)
@@ -73,7 +85,7 @@ namespace AbsoluteCommons.Components {
 		}
 	}
 
-	[Serializable, Inspectable]
+	[Serializable]
 	public sealed class Timer {
 		public enum State {
 			NotStarted,
@@ -93,7 +105,8 @@ namespace AbsoluteCommons.Components {
 		internal bool isTracked;
 		private readonly bool decrement;
 		
-		internal event Action<Timer> OnComplete;
+		internal event Action<GameObject, Timer> OnComplete;
+		internal GameObject owner;
 
 		public long ID => uniqueID;
 
@@ -103,7 +116,7 @@ namespace AbsoluteCommons.Components {
 
 		public bool IsRepeating => repeating;
 
-		private Timer(float initial, float target, bool repeating, Action<Timer> onComplete) {
+		private Timer(float initial, float target, bool repeating, Action<GameObject, Timer> onComplete) {
 			if (initial == target)
 				throw new ArgumentException("Initial and target values cannot be equal");
 
@@ -115,20 +128,20 @@ namespace AbsoluteCommons.Components {
 			OnComplete += onComplete;
 		}
 
-		public static Timer CreateCountup(Action<Timer> onCompleted, float target, bool repeating = false) {
-			return new Timer(0, target, repeating, onCompleted);
+		public static Timer CreateCountup(int completionActionID, float target, bool repeating = false) {
+			return new Timer(0, target, repeating, TimersTracker.GetCompletionAction(completionActionID));
 		}
 
-		public static Timer CreateCountup(Action<Timer> onCompleted, float initial, float target, bool repeating = false) {
-			return new Timer(initial, target, repeating, onCompleted);
+		public static Timer CreateCountup(int completionActionID, float initial, float target, bool repeating = false) {
+			return new Timer(initial, target, repeating, TimersTracker.GetCompletionAction(completionActionID));
 		}
 
-		public static Timer CreateCountdown(Action<Timer> onCompleted, float initial, bool repeating = false) {
-			return new Timer(initial, 0, repeating, onCompleted);
+		public static Timer CreateCountdown(int completionActionID, float initial, bool repeating = false) {
+			return new Timer(initial, 0, repeating, TimersTracker.GetCompletionAction(completionActionID));
 		}
 
-		public static Timer CreateCountdown(Action<Timer> onCompleted, float initial, float target, bool repeating = false) {
-			return new Timer(initial, target, repeating, onCompleted);
+		public static Timer CreateCountdown(int completionActionID, float initial, float target, bool repeating = false) {
+			return new Timer(initial, target, repeating, TimersTracker.GetCompletionAction(completionActionID));
 		}
 
 		public void Start() {
@@ -169,13 +182,13 @@ namespace AbsoluteCommons.Components {
 				while (HasTargetBeenReached()) {
 					// Allow any excess time to be carried over to the next iteration
 					_current -= target - initial;
-					OnComplete?.Invoke(this);
+					OnComplete?.Invoke(owner, this);
 				}
 			} else if (HasTargetBeenReached()) {
 				// The non-repeating timer has finished
 				_current = target;
 				_state = State.Completed;
-				OnComplete?.Invoke(this);
+				OnComplete?.Invoke(owner, this);
 			}
 		}
 	}

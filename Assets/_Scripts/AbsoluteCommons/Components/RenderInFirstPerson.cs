@@ -1,4 +1,5 @@
-﻿using TowerDefense.CameraComponents;
+﻿using AbsoluteCommons.Utility;
+using TowerDefense.CameraComponents;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -8,8 +9,14 @@ namespace AbsoluteCommons.Components {
 		public bool renderInFirstPerson = true;
 		public bool showShadowsInFirstPerson = true;
 
+		private CameraFollow _camera;
+
+		private void Awake() {
+			_camera = Camera.main.GetComponent<CameraFollow>();
+		}
+
 		private void Update() {
-			bool inFirstPerson = Camera.main.GetComponent<CameraFollow>().FirstPersonRenderingMode;
+			bool inFirstPerson = _camera.FirstPersonRenderingMode && _camera.target.IsObjectOrParentOfObject(gameObject);
 
 			foreach (Renderer renderer in gameObject.GetComponentsInChildren<Renderer>()) {
 				if (renderInFirstPerson == inFirstPerson) {

@@ -32,5 +32,26 @@ namespace AbsoluteCommons.Utility {
 
 			return current.gameObject;
 		}
+
+		public static T GetChildComponent<T>(this GameObject parent, string path) where T : Component {
+			GameObject child = parent.GetChild(path);
+			return child == null ? null : child.GetComponent<T>();
+		}
+
+		public static bool IsObjectOrParentOfObject(this GameObject searcher, GameObject target) {
+			if (!searcher)
+				return false;
+
+			Transform check = target.transform;
+			
+			while (check != null) {
+				if (check.gameObject == searcher)
+					return true;
+
+				check = check.parent;
+			}
+
+			return false;
+		}
 	}
 }

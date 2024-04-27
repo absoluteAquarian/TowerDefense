@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using AbsoluteCommons.Utility;
+using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player {
 	public class PlayerTauntResetBehavior : StateMachineBehaviour {
@@ -11,7 +12,7 @@ namespace TowerDefense.Animations.Behaviors.Player {
 		// OnStateUpdate is called before OnStateUpdate is called on any state inside this state machine
 		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			// Reset the taunt trigger
-			animator.ResetTrigger("taunting");
+			animator.NetResetTriggerSafely("taunting");
 		}
 
 		// OnStateExit is called before OnStateExit is called on any state inside this state machine

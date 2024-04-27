@@ -84,7 +84,7 @@ MonoBehaviour:
   shootAnimationMultiplier: 3.5
   shootTime: 0.1667
   autoFire: 1
-  spread: 10
+  spread: 0.8
   projectilePrefab: {fileID: 710789882229869826, guid: 3048a67ad9ba2484080b37b64a3452f7, type: 3}
   projectileOrigin: {fileID: 4491586127011210831}
   firstPersonModelOffset: {x: 0.45, y: -0.2, z: 0.05}

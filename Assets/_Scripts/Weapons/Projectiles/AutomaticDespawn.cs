@@ -1,4 +1,6 @@
 ﻿using AbsoluteCommons.Objects;
+using AbsoluteCommons.Utility;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace TowerDefense.Weapons.Projectiles {
@@ -36,8 +38,12 @@ namespace TowerDefense.Weapons.Projectiles {
 
 				// Reset the timer since the object could be reused
 				_timeAlive = 0f;
-			} else
-				Destroy(gameObject);
+			} else {
+				if (gameObject.TryGetComponent(out NetworkObject netObj))
+					netObj.SmartDespawn(true);
+				else
+					Destroy(gameObject);
+			}
 		}
 	}
 }

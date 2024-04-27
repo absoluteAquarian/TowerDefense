@@ -14,7 +14,10 @@ namespace TowerDefense.UI {
 		}
 
 		private void Update() {
-			GameObject.Find("ClientPlayer").GetComponent<PlayerWeaponInfo>().UpdateDebugGUI(_info, _origText);
+			GameObject player = GameObject.FindWithTag("Player");
+
+			if (player)
+				player.GetComponent<PlayerWeaponInfo>().UpdateDebugGUI(_info, _origText);
 		}
 	}
 }

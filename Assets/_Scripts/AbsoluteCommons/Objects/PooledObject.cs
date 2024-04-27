@@ -1,8 +1,9 @@
 ﻿using AbsoluteCommons.Attributes;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace AbsoluteCommons.Objects {
-	public class PooledObject : MonoBehaviour {
+	public class PooledObject : NetworkBehaviour {
 		public DynamicObjectPool Pool {
 			get => _pool;
 			private set => _pool = value;
@@ -14,7 +15,7 @@ namespace AbsoluteCommons.Objects {
 		}
 
 		[SerializeField, ReadOnly] private DynamicObjectPool _pool;
-		[SerializeField, ReadOnly] private int _index;
+		[SerializeField, ReadOnly] private int _index = -1;
 
 		public static void EnsureConnection(GameObject obj, DynamicObjectPool pool, int index) {
 			if (!obj.TryGetComponent(out PooledObject component))
@@ -22,8 +23,76 @@ namespace AbsoluteCommons.Objects {
 
 			component._pool = pool;
 			component._index = index;
+
+			if (component.IsOwner)
+				component.EnsureConnectionServerRpc(obj.GetComponent<NetworkObject>().NetworkObjectId, pool.NetworkObjectId, index);
 		}
 
-		public void ReturnToPool() => Pool.Return(gameObject);
+		[ServerRpc]
+		private void EnsureConnectionServerRpc(ulong networkObjectID, ulong poolNetworkObjectID, int index) {
+			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectID, out NetworkObject networkObject))
+				return;
+
+			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(poolNetworkObjectID, out NetworkObject poolNetworkObject))
+				return;
+
+			EnsureConnection(networkObject.gameObject, poolNetworkObject.gameObject.GetComponent<DynamicObjectPool>(), index);
+
+			EnsureConnectionClientRpc(networkObjectID, poolNetworkObjectID, index);
+		}
+
+		[ClientRpc]
+		private void EnsureConnectionClientRpc(ulong networkObjectID, ulong poolNetworkObjectID, int index) {
+			if (IsOwner)
+				return;
+
+			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectID, out NetworkObject networkObject))
+				return;
+
+			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(poolNetworkObjectID, out NetworkObject poolNetworkObject))
+				return;
+
+			EnsureConnection(networkObject.gameObject, poolNetworkObject.gameObject.GetComponent<DynamicObjectPool>(), index);
+		}
+
+		public void ReturnToPool() {
+			Pool.Return(gameObject);
+			_index = -1;
+		}
+
+		protected override void OnSynchronize<T>(ref BufferSerializer<T> serializer) {
+			if (serializer.IsWriter) {
+				var writer = serializer.GetFastBufferWriter();
+
+				if (_pool) {
+					writer.WriteValueSafe(true);
+					writer.WriteValueSafe(_pool.NetworkObjectId);
+				} else
+					writer.WriteValueSafe(false);
+
+				writer.WriteValueSafe(_index);
+			} else {
+				var reader = serializer.GetFastBufferReader();
+
+				reader.ReadValueSafe(out bool hasPool);
+
+				if (hasPool) {
+					reader.ReadValueSafe(out ulong poolId);
+					_pool = NetworkManager.Singleton.SpawnManager.SpawnedObjects[poolId].GetComponent<DynamicObjectPool>();
+				} else
+					_pool = null;
+
+				reader.ReadValueSafe(out _index);
+			}
+
+			base.OnSynchronize(ref serializer);
+		}
+
+		public override void OnNetworkDespawn() {
+			if (_index >= 0)
+				ReturnToPool();
+
+			base.OnNetworkDespawn();
+		}
 	}
 }

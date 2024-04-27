@@ -2,12 +2,15 @@
 using AbsoluteCommons.PhysicsMath;
 using AbsoluteCommons.Utility;
 using System;
+using TowerDefense.CameraComponents;
+using TowerDefense.Networking;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace TowerDefense.Player {
 	[AddComponentMenu("Player/Player Movement")]
 	[RequireComponent(typeof(CharacterController))]
-	public class PlayerMovement : MonoBehaviour {
+	public class PlayerMovement : NetworkBehaviour {
 		[SerializeField, ReadOnly] private Vector3 _velocity;
 		[SerializeField, ReadOnly] private float _velocityMagnitude;
 		[SerializeField, ReadOnly] private bool _isGrounded;
@@ -24,6 +27,9 @@ namespace TowerDefense.Player {
 		[SerializeField] private float _sprintingAcceleration = 250f;
 		[SerializeField] private float _friction = 13f;
 		[SerializeField] private float _airFriction = 7f;
+		// Extra fields for accurate networking
+		private Vector3 _horizontalVelocity;
+		private float _timeSnapshot;
 
 		[Header("Controls")]
 		public bool canJump = true;
@@ -38,11 +44,32 @@ namespace TowerDefense.Player {
 			_controller = GetComponent<CharacterController>();
 
 			// NOTE: the child paths may need to be changed if this script is used in a different project
-			_firstPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot Arms").GetComponent<Animator>();
-			_thirdPersonAnimator = transform.gameObject.GetChild("Animator/Y Bot").GetComponent<Animator>();
+			_firstPersonAnimator = transform.gameObject.GetChildComponent<Animator>("Animator/Y Bot Arms");
+			_thirdPersonAnimator = transform.gameObject.GetChildComponent<Animator>("Animator/Y Bot");
+
+			_clientState = new NetworkVariable<NetworkState>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+		}
+
+		public override void OnNetworkSpawn() {
+			if (base.IsOwner) {
+				// Set the camera's target to the player
+				Camera.main.GetComponent<CameraFollow>().target = gameObject;
+				tag = "Player";
+				Debug.Log("[PlayerMovement] Setting camera target to local player");
+			} else {
+				tag = "Other Players";
+			}
 		}
 
 		private void Update() {
+			if (IsOwner) {
+				UpdateClientState();
+				TransmitClientState();
+			} else
+				ConsumeClientState();
+		}
+		
+		private void UpdateClientState() {
 			_isGrounded = _controller.isGrounded;
 
 			// Handle grounded interaction
@@ -56,7 +83,7 @@ namespace TowerDefense.Player {
 			}
 
 			// Handle sprinting
-			bool sprinting = Input.GetButton("Sprint");
+			bool sprinting = ClientInput.IsPressed("Sprint");
 			_thirdPersonAnimator.SetBool("sprinting", sprinting);
 
 			// Get a rotation to be applied to directions
@@ -67,7 +94,13 @@ namespace TowerDefense.Player {
 			// Get horizontal movement
 			if (!zeroVelocity) {
 				if (canMoveHorizontally) {
-					Vector3 move = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+					Vector3 move = new Vector3(ClientInput.GetRaw("Horizontal"), 0, ClientInput.GetRaw("Vertical"));
+
+					// Ensure that the movement vector can't be longer than 1
+					// This is to prevent faster diagonal movement
+					if (move.sqrMagnitude > 1)
+						move.Normalize();
+
 					move = movementRotation * move;
 					move *= (sprinting ? _sprintingAcceleration : _acceleration) * Time.deltaTime;
 
@@ -90,6 +123,7 @@ namespace TowerDefense.Player {
 				.WithPerpendicularSpeedCap(_gravity, sprinting ? _sprintingMaxVelocity : _maxVelocity);
 
 			Vector3 horizontalVelocity = _velocity.PerpendicularTo(_gravity);
+			_horizontalVelocity = horizontalVelocity;
 			_velocityMagnitude = horizontalVelocity.magnitude;
 
 			_thirdPersonAnimator.SetBool("hasHorizontalMovement", _velocityMagnitude > 0.1f);
@@ -111,7 +145,7 @@ namespace TowerDefense.Player {
 			bool canTaunt = _isGrounded && !_thirdPersonAnimator.GetBool("landing");
 
 			// Handle jump
-			if (canJump && _isGrounded && Input.GetButtonDown("Jump")) {
+			if (canJump && _isGrounded && ClientInput.IsTriggered("Jump")) {
 				_velocity += _jumpStrength * ArbitraryGravity.Up(_gravity);
 
 				// Set the triggers in the animator
@@ -134,7 +168,9 @@ namespace TowerDefense.Player {
 				_thirdPersonAnimator.SetBool("falling", false);
 			}
 
-			_firstPersonAnimator.SetBool("canTaunt", canTaunt);
+			if (_firstPersonAnimator)
+				_firstPersonAnimator.SetBool("canTaunt", canTaunt);
+
 			_thirdPersonAnimator.SetBool("canTaunt", canTaunt);
 
 			// Apply gravity
@@ -149,8 +185,159 @@ namespace TowerDefense.Player {
 
 			// Move the player
 			_collisionFlags = _controller.Move(_velocity * Time.deltaTime);
+			_timeSnapshot = Time.deltaTime;
 
 			_oldGrounded = _isGrounded;
+		}
+
+		private NetworkVariable<NetworkState> _clientState;
+
+		private void TransmitClientState() {
+			NetworkState state = NetworkState.CopyState(this);
+
+			if (IsServer)
+				_clientState.Value = state;
+			else
+				TransmiteStateServerRpc(state);
+		}
+
+		[ServerRpc]
+		private void TransmiteStateServerRpc(NetworkState state) {
+			_clientState.Value = state;
+		}
+
+		private void ConsumeClientState() {
+			NetworkState state = _clientState.Value;
+
+			_velocity = state._velocity;
+			_gravity = state._gravity;
+			_isGrounded = state._isGrounded;
+			canJump = state.canJump;
+			canMoveHorizontally = state.canMoveHorizontally;
+			zeroVelocity = state.zeroVelocity;
+			_horizontalVelocity = state._horizontalVelocity;
+			_timeSnapshot = state._timeSnapshot;
+
+			// Move the player
+			_collisionFlags = _controller.Move(_velocity * _timeSnapshot);
+		}
+
+		private struct NetworkState : INetworkSerializable {
+			public Vector3 _velocity;
+			public Vector3 _gravity;
+			public bool _isGrounded;
+			public bool canJump;
+			public bool canMoveHorizontally;
+			public bool zeroVelocity;
+			public Vector3 _horizontalVelocity;
+			public float _timeSnapshot;
+
+			public static NetworkState CopyState(PlayerMovement self) {
+				return new NetworkState() {
+					_velocity = self._velocity,
+					_gravity = self._gravity,
+					_isGrounded = self._isGrounded,
+					canJump = self.canJump,
+					canMoveHorizontally = self.canMoveHorizontally,
+					zeroVelocity = self.zeroVelocity,
+					_horizontalVelocity = self._horizontalVelocity,
+					_timeSnapshot = self._timeSnapshot
+				};
+			}
+
+			void INetworkSerializable.NetworkSerialize<T>(BufferSerializer<T> serializer) {
+				if (serializer.IsWriter) {
+					var writer = serializer.GetFastBufferWriter();
+
+					writer.WriteValueSafe(_velocity);
+					writer.WriteValueSafe(_gravity);
+					writer.WriteValueSafe(_horizontalVelocity);
+					writer.WriteValueSafe(_timeSnapshot);
+
+					using (BitWriter bitWriter = writer.EnterBitwiseContext()) {
+						bitWriter.TryBeginWriteBits(4);
+
+						bitWriter.WriteBit(_isGrounded);
+						bitWriter.WriteBit(canJump);
+						bitWriter.WriteBit(canMoveHorizontally);
+						bitWriter.WriteBit(zeroVelocity);
+					}
+				} else {
+					var reader = serializer.GetFastBufferReader();
+
+					reader.ReadValueSafe(out _velocity);
+					reader.ReadValueSafe(out _gravity);
+					reader.ReadValueSafe(out _horizontalVelocity);
+					reader.ReadValueSafe(out _timeSnapshot);
+
+					using (BitReader bitReader = reader.EnterBitwiseContext()) {
+						bitReader.TryBeginReadBits(4);
+
+						bitReader.ReadBit(out _isGrounded);
+						bitReader.ReadBit(out canJump);
+						bitReader.ReadBit(out canMoveHorizontally);
+						bitReader.ReadBit(out zeroVelocity);
+					}
+				}
+			}
+		}
+
+		protected override void OnSynchronize<T>(ref BufferSerializer<T> serializer) {
+			if (serializer.IsWriter) {
+				var writer = serializer.GetFastBufferWriter();
+				writer.WriteValueSafe(_velocity);
+				writer.WriteValueSafe(_velocityMagnitude);
+				writer.WriteValueSafe(_gravity);
+				writer.WriteValueSafe(_maxFallVelocity);
+				writer.WriteValueSafe(_jumpStrength);
+				writer.WriteValueSafe(_maxVelocity);
+				writer.WriteValueSafe(_sprintingMaxVelocity);
+				writer.WriteValueSafe(_acceleration);
+				writer.WriteValueSafe(_sprintingAcceleration);
+				writer.WriteValueSafe(_friction);
+				writer.WriteValueSafe(_airFriction);
+				writer.WriteValueSafe(_horizontalVelocity);
+				writer.WriteValueSafe(_timeSnapshot);
+
+				using (BitWriter bitWriter = writer.EnterBitwiseContext()) {
+					bitWriter.TryBeginWriteBits(6);
+
+					bitWriter.WriteBit(_isGrounded);
+					bitWriter.WriteBit(_oldGrounded);
+					bitWriter.WriteBit(_hasOldGravity);
+					bitWriter.WriteBit(canJump);
+					bitWriter.WriteBit(canMoveHorizontally);
+					bitWriter.WriteBit(zeroVelocity);
+				}
+			} else {
+				var reader = serializer.GetFastBufferReader();
+				reader.ReadValueSafe(out _velocity);
+				reader.ReadValueSafe(out _velocityMagnitude);
+				reader.ReadValueSafe(out _gravity);
+				reader.ReadValueSafe(out _maxFallVelocity);
+				reader.ReadValueSafe(out _jumpStrength);
+				reader.ReadValueSafe(out _maxVelocity);
+				reader.ReadValueSafe(out _sprintingMaxVelocity);
+				reader.ReadValueSafe(out _acceleration);
+				reader.ReadValueSafe(out _sprintingAcceleration);
+				reader.ReadValueSafe(out _friction);
+				reader.ReadValueSafe(out _airFriction);
+				reader.ReadValueSafe(out _horizontalVelocity);
+				reader.ReadValueSafe(out _timeSnapshot);
+
+				using (BitReader bitReader = reader.EnterBitwiseContext()) {
+					bitReader.TryBeginReadBits(6);
+
+					bitReader.ReadBit(out _isGrounded);
+					bitReader.ReadBit(out _oldGrounded);
+					bitReader.ReadBit(out _hasOldGravity);
+					bitReader.ReadBit(out canJump);
+					bitReader.ReadBit(out canMoveHorizontally);
+					bitReader.ReadBit(out zeroVelocity);
+				}
+			}
+
+			base.OnSynchronize(ref serializer);
 		}
 	}
 }

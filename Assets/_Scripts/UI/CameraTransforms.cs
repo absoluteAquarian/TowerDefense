@@ -24,14 +24,12 @@ namespace TowerDefense.UI {
 
 		// Update is called once per frame
 		void Update() {
-			// Get the "ClientPlayer" object
-			GameObject player = GameObject.Find("ClientPlayer");
-
-			// Get the "CameraFollow" component of the main camera
+			GameObject player = GameObject.FindWithTag("Player");
 			CameraFollow view = Camera.main.GetComponent<CameraFollow>();
-
-			// Get the "FirstPersonView" component of the main camera
 			FirstPersonView viewScript = Camera.main.GetComponent<FirstPersonView>();
+
+			if (!player || !view || !viewScript)
+				return;
 
 			// Update the text
 			_playerInfo.text = _origPlayerText
