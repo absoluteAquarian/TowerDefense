@@ -25,34 +25,38 @@ namespace AbsoluteCommons.Objects {
 			component._index = index;
 
 			if (component.IsOwner)
-				component.EnsureConnectionServerRpc(obj.GetComponent<NetworkObject>().NetworkObjectId, pool.NetworkObjectId, index);
+				component.EnsureConnectionServerRpc(obj, pool.gameObject, index);
 		}
 
 		[ServerRpc]
-		private void EnsureConnectionServerRpc(ulong networkObjectID, ulong poolNetworkObjectID, int index) {
-			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectID, out NetworkObject networkObject))
+		private void EnsureConnectionServerRpc(NetworkObjectReference pooledObjectRef, NetworkObjectReference poolRef, int index) {
+			GameObject pooledObj = pooledObjectRef;
+			if (!pooledObj)
 				return;
 
-			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(poolNetworkObjectID, out NetworkObject poolNetworkObject))
+			GameObject pool = poolRef;
+			if (!pool)
 				return;
 
-			EnsureConnection(networkObject.gameObject, poolNetworkObject.gameObject.GetComponent<DynamicObjectPool>(), index);
+			EnsureConnection(pooledObj, pool.GetComponent<DynamicObjectPool>(), index);
 
-			EnsureConnectionClientRpc(networkObjectID, poolNetworkObjectID, index);
+			EnsureConnectionClientRpc(pooledObjectRef, poolRef, index);
 		}
 
 		[ClientRpc]
-		private void EnsureConnectionClientRpc(ulong networkObjectID, ulong poolNetworkObjectID, int index) {
+		private void EnsureConnectionClientRpc(NetworkObjectReference pooledObjectRef, NetworkObjectReference poolRef, int index) {
 			if (IsOwner)
 				return;
 
-			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectID, out NetworkObject networkObject))
+			GameObject pooledObj = pooledObjectRef;
+			if (!pooledObj)
 				return;
 
-			if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(poolNetworkObjectID, out NetworkObject poolNetworkObject))
+			GameObject pool = poolRef;
+			if (!pool)
 				return;
 
-			EnsureConnection(networkObject.gameObject, poolNetworkObject.gameObject.GetComponent<DynamicObjectPool>(), index);
+			EnsureConnection(pooledObj, pool.GetComponent<DynamicObjectPool>(), index);
 		}
 
 		public void ReturnToPool() {

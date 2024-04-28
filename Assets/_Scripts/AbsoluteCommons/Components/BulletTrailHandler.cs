@@ -3,12 +3,13 @@ using AbsoluteCommons.Collections;
 using AbsoluteCommons.Objects;
 using System.Collections;
 using System.Collections.Concurrent;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace AbsoluteCommons.Components {
 	// Code was derived from:  https://forums.unity.com/threads/need-advice-on-making-high-speed-bullet-trails-with-raycasting.1211583/
 	[RequireComponent(typeof(DynamicObjectPool))]
-	public class BulletTrailHandler : MonoBehaviour {
+	public class BulletTrailHandler : NetworkBehaviour {
 		[SerializeField] private TrailRenderer _trailPrefab;
 		[SerializeField] private float _fakeBulletSpeed = 1f;
 
@@ -52,7 +53,16 @@ namespace AbsoluteCommons.Components {
 
 			_trailPool.SetPrefab(_trailPrefab);
 
+			if (base.IsOwner)
+				InternalCreateTrailServerRpc(start, end);
+		}
+
+		[ServerRpc]
+		private void InternalCreateTrailServerRpc(Vector3 start, Vector3 end) {
 			TrailRenderer trail = _trailPool.Get<TrailRenderer>();
+			if (!trail)
+				return;
+
 			trail.transform.SetPositionAndRotation(start, Quaternion.identity);
 
 			trail.Clear();
@@ -86,19 +96,24 @@ namespace AbsoluteCommons.Components {
 			_queuedTrailRemovals.Add(activeIndex);
 		}
 
-		private void OnDestroy() {
+		public override void OnDestroy() {
 			// Forcibly despawn any remaining trails
 			foreach (int index in _knownActiveIndices)
 				_queuedTrailRemovals.Add(index);
 
 			CheckRemovalQueue();
+
+			base.OnDestroy();
 		}
 
 		private void CheckRemovalQueue() {
 			while (_queuedTrailRemovals.TryTake(out int index)) {
 				TrailRenderer trail = _activeTrails[index];
-				trail.enabled = false;
-				trail.gameObject.GetComponent<PooledObject>().ReturnToPool();
+
+				if (trail) {
+					trail.enabled = false;
+					trail.gameObject.GetComponent<PooledObject>().ReturnToPool();
+				}
 
 				_activeTrails.Remove(index);
 				_knownActiveIndices.Remove(index);

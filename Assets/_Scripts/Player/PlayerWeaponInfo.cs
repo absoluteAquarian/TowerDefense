@@ -141,15 +141,17 @@ namespace TowerDefense.Player {
 					DestroyWeaponObject();
 			}
 
-			if (ClientInput.IsTriggered("Deploy Weapon"))
-				DeployWeapon();
-			else if (ClientInput.IsTriggered("Holster Weapon"))
-				HolsterWeapon();
+			if (base.IsOwner) {
+				if (ClientInput.IsTriggered("Deploy Weapon"))
+					DeployWeapon();
+				else if (ClientInput.IsTriggered("Holster Weapon"))
+					HolsterWeapon();
 			
-			if (CanShootWeapon())
-				ShootWeapon();
-			else
-				_triggerFinger = false;
+				if (CanShootWeapon())
+					ShootWeapon();
+				else
+					_triggerFinger = false;
+			}
 
 			// Update the animator
 			if (_firstPersonAnimator)
@@ -183,11 +185,28 @@ namespace TowerDefense.Player {
 			}
 			*/
 
-			if (_firstPersonAnimator)
-				_firstPersonAnimator.SetInteger("weaponID", (int)_currentWeapon);
+			if (base.IsOwner) {
+				if (_firstPersonAnimator)
+					_firstPersonAnimator.SetInteger("weaponID", (int)_currentWeapon);
 
-			if (_thirdPersonAnimator)
-				_thirdPersonAnimator.SetInteger("weaponID", (int)_currentWeapon);
+				if (_thirdPersonAnimator)
+					_thirdPersonAnimator.SetInteger("weaponID", (int)_currentWeapon);
+
+				ChangeWeaponTypeServerRpc(new WeaponTypeChangeMessage(weapon));
+			}
+		}
+
+		[ServerRpc]
+		private void ChangeWeaponTypeServerRpc(WeaponTypeChangeMessage msg) {
+			ChangeWeaponTypeClientRpc(msg);
+		}
+
+		[ClientRpc]
+		private void ChangeWeaponTypeClientRpc(WeaponTypeChangeMessage msg) {
+			if (base.IsOwner)
+				return;
+
+			SetWeapon(msg.weapon);
 		}
 
 		public void DeployWeapon(bool immediate = false) {
@@ -205,11 +224,15 @@ namespace TowerDefense.Player {
 				_playWeaponAnimation = false;
 				InitWeaponObject();
 				
-				if (_networkFirstPersonAnimator)
-					_networkFirstPersonAnimator.ForceTrigger("immediateDeployWeapon");
+				if (base.IsOwner) {
+					if (_networkFirstPersonAnimator)
+						_networkFirstPersonAnimator.ForceTrigger("immediateDeployWeapon");
 
-				if (_networkThirdPersonAnimator)
-					_networkThirdPersonAnimator.ForceTrigger("immediateDeployWeapon");
+					if (_networkThirdPersonAnimator)
+						_networkThirdPersonAnimator.ForceTrigger("immediateDeployWeapon");
+
+					WeaponStateServerRpc(new WeaponStateMessage(deploying: true, immediate: true));
+				}
 
 				return;
 			}
@@ -221,11 +244,15 @@ namespace TowerDefense.Player {
 			_transitionTime = 0.0f;
 			_playWeaponAnimation = true;
 
-			if (_networkFirstPersonAnimator)
-				_networkFirstPersonAnimator.SetTrigger("deployWeapon");
+			if (base.IsOwner) {
+				if (_networkFirstPersonAnimator)
+					_networkFirstPersonAnimator.SetTrigger("deployWeapon");
 
-			if (_networkThirdPersonAnimator)
-				_networkThirdPersonAnimator.SetTrigger("deployWeapon");
+				if (_networkThirdPersonAnimator)
+					_networkThirdPersonAnimator.SetTrigger("deployWeapon");
+
+				WeaponStateServerRpc(new WeaponStateMessage(deploying: true, immediate: false));
+			}
 		}
 
 		public void HolsterWeapon(bool immediate = false) {
@@ -241,11 +268,15 @@ namespace TowerDefense.Player {
 				_playWeaponAnimation = false;
 				DestroyWeaponObject();
 
-				if (_networkFirstPersonAnimator)
-					_networkFirstPersonAnimator.ForceTrigger("immediateHolsterWeapon");
+				if (base.IsOwner) {
+					if (_networkFirstPersonAnimator)
+						_networkFirstPersonAnimator.ForceTrigger("immediateHolsterWeapon");
 
-				if (_networkThirdPersonAnimator)
-					_networkThirdPersonAnimator.ForceTrigger("immediateHolsterWeapon");
+					if (_networkThirdPersonAnimator)
+						_networkThirdPersonAnimator.ForceTrigger("immediateHolsterWeapon");
+
+					WeaponStateServerRpc(new WeaponStateMessage(deploying: false, immediate: true));
+				}
 
 				return;
 			}
@@ -254,11 +285,31 @@ namespace TowerDefense.Player {
 			_transitionTime = 0.0f;
 			_playWeaponAnimation = true;
 
-			if (_networkFirstPersonAnimator)
-				_networkFirstPersonAnimator.SetTrigger("holsterWeapon");
+			if (base.IsOwner) {
+				if (_networkFirstPersonAnimator)
+					_networkFirstPersonAnimator.SetTrigger("holsterWeapon");
 
-			if (_networkThirdPersonAnimator)
-				_networkThirdPersonAnimator.SetTrigger("holsterWeapon");
+				if (_networkThirdPersonAnimator)
+					_networkThirdPersonAnimator.SetTrigger("holsterWeapon");
+
+				WeaponStateServerRpc(new WeaponStateMessage(deploying: false, immediate: false));
+			}
+		}
+
+		[ServerRpc]
+		private void WeaponStateServerRpc(WeaponStateMessage msg) {
+			WeaponStateClientRpc(msg);
+		}
+
+		[ClientRpc]
+		private void WeaponStateClientRpc(WeaponStateMessage msg) {
+			if (IsOwner)
+				return;
+
+			if (msg.deploying)
+				DeployWeapon(msg.immediate);
+			else
+				HolsterWeapon(msg.immediate);
 		}
 
 		private bool CanShootWeapon() {
@@ -545,6 +596,56 @@ namespace TowerDefense.Player {
 					reader.ReadValueSafe(out weaponPosition);
 					reader.ReadValueSafe(out weaponRotation);
 					reader.ReadValueSafe(out weaponSpread);
+				}
+			}
+		}
+
+		private struct WeaponStateMessage : INetworkSerializable {
+			public bool deploying;
+			public bool immediate;
+
+			public WeaponStateMessage(bool deploying, bool immediate) {
+				this.deploying = deploying;
+				this.immediate = immediate;
+			}
+
+			public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter {
+				if (serializer.IsWriter) {
+					var writer = serializer.GetFastBufferWriter();
+
+					using (var bitWriter = writer.EnterBitwiseContext()) {
+						bitWriter.TryBeginWriteBits(1);
+
+						bitWriter.WriteBit(deploying);
+					}
+				} else {
+					var reader = serializer.GetFastBufferReader();
+
+					using (var bitReader = reader.EnterBitwiseContext()) {
+						bitReader.TryBeginReadBits(1);
+
+						bitReader.ReadBit(out deploying);
+					}
+				}
+			}
+		}
+
+		private struct WeaponTypeChangeMessage : INetworkSerializable {
+			public WeaponType weapon;
+
+			public WeaponTypeChangeMessage(WeaponType weapon) {
+				this.weapon = weapon;
+			}
+
+			public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter {
+				if (serializer.IsWriter) {
+					var writer = serializer.GetFastBufferWriter();
+
+					writer.WriteValueSafe(weapon);
+				} else {
+					var reader = serializer.GetFastBufferReader();
+
+					reader.ReadValueSafe(out weapon);
 				}
 			}
 		}

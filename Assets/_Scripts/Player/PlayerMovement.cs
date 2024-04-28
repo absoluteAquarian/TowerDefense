@@ -29,7 +29,7 @@ namespace TowerDefense.Player {
 		[SerializeField] private float _airFriction = 7f;
 		// Extra fields for accurate networking
 		private Vector3 _horizontalVelocity;
-		private float _timeSnapshot;
+		private Vector3 _actualMovement;
 
 		[Header("Controls")]
 		public bool canJump = true;
@@ -40,6 +40,8 @@ namespace TowerDefense.Player {
 		private Animator _firstPersonAnimator;
 		private Animator _thirdPersonAnimator;
 
+		private CameraFollow _camera;
+
 		private void Awake() {
 			_controller = GetComponent<CharacterController>();
 
@@ -48,12 +50,14 @@ namespace TowerDefense.Player {
 			_thirdPersonAnimator = transform.gameObject.GetChildComponent<Animator>("Animator/Y Bot");
 
 			_clientState = new NetworkVariable<NetworkState>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+			_camera = Camera.main.GetComponent<CameraFollow>();
 		}
 
 		public override void OnNetworkSpawn() {
 			if (base.IsOwner) {
 				// Set the camera's target to the player
-				Camera.main.GetComponent<CameraFollow>().target = gameObject;
+				_camera.target = gameObject;
 				tag = "Player";
 				Debug.Log("[PlayerMovement] Setting camera target to local player");
 			} else {
@@ -67,6 +71,13 @@ namespace TowerDefense.Player {
 				TransmitClientState();
 			} else
 				ConsumeClientState();
+
+			// Move the player
+			_collisionFlags = _controller.Move(_actualMovement);
+			_oldGrounded = _isGrounded;
+
+			if (_camera.target == gameObject)
+				_camera.RecalculatePositionAndRotation();
 		}
 		
 		private void UpdateClientState() {
@@ -184,10 +195,8 @@ namespace TowerDefense.Player {
 			}
 
 			// Move the player
-			_collisionFlags = _controller.Move(_velocity * Time.deltaTime);
-			_timeSnapshot = Time.deltaTime;
-
-			_oldGrounded = _isGrounded;
+			_actualMovement = _velocity * Time.deltaTime;
+		//	_collisionFlags = _controller.Move(_actualMovement);
 		}
 
 		private NetworkVariable<NetworkState> _clientState;
@@ -210,38 +219,38 @@ namespace TowerDefense.Player {
 			NetworkState state = _clientState.Value;
 
 			_velocity = state._velocity;
+		//	_collisionFlags = state._collisionFlags;
 			_gravity = state._gravity;
 			_isGrounded = state._isGrounded;
 			canJump = state.canJump;
 			canMoveHorizontally = state.canMoveHorizontally;
 			zeroVelocity = state.zeroVelocity;
 			_horizontalVelocity = state._horizontalVelocity;
-			_timeSnapshot = state._timeSnapshot;
-
-			// Move the player
-			_collisionFlags = _controller.Move(_velocity * _timeSnapshot);
+			_actualMovement = state._actualMovement;
 		}
 
 		private struct NetworkState : INetworkSerializable {
 			public Vector3 _velocity;
+		//	public CollisionFlags _collisionFlags;
 			public Vector3 _gravity;
 			public bool _isGrounded;
 			public bool canJump;
 			public bool canMoveHorizontally;
 			public bool zeroVelocity;
 			public Vector3 _horizontalVelocity;
-			public float _timeSnapshot;
+			public Vector3 _actualMovement;
 
 			public static NetworkState CopyState(PlayerMovement self) {
 				return new NetworkState() {
 					_velocity = self._velocity,
+				//	_collisionFlags = self._collisionFlags,
 					_gravity = self._gravity,
 					_isGrounded = self._isGrounded,
 					canJump = self.canJump,
 					canMoveHorizontally = self.canMoveHorizontally,
 					zeroVelocity = self.zeroVelocity,
 					_horizontalVelocity = self._horizontalVelocity,
-					_timeSnapshot = self._timeSnapshot
+					_actualMovement = self._actualMovement
 				};
 			}
 
@@ -250,9 +259,10 @@ namespace TowerDefense.Player {
 					var writer = serializer.GetFastBufferWriter();
 
 					writer.WriteValueSafe(_velocity);
+				//	writer.WriteValueSafe(_collisionFlags);
 					writer.WriteValueSafe(_gravity);
 					writer.WriteValueSafe(_horizontalVelocity);
-					writer.WriteValueSafe(_timeSnapshot);
+					writer.WriteValueSafe(_actualMovement);
 
 					using (BitWriter bitWriter = writer.EnterBitwiseContext()) {
 						bitWriter.TryBeginWriteBits(4);
@@ -266,9 +276,10 @@ namespace TowerDefense.Player {
 					var reader = serializer.GetFastBufferReader();
 
 					reader.ReadValueSafe(out _velocity);
+				//	reader.ReadValueSafe(out _collisionFlags);
 					reader.ReadValueSafe(out _gravity);
 					reader.ReadValueSafe(out _horizontalVelocity);
-					reader.ReadValueSafe(out _timeSnapshot);
+					reader.ReadValueSafe(out _actualMovement);
 
 					using (BitReader bitReader = reader.EnterBitwiseContext()) {
 						bitReader.TryBeginReadBits(4);
@@ -287,6 +298,7 @@ namespace TowerDefense.Player {
 				var writer = serializer.GetFastBufferWriter();
 				writer.WriteValueSafe(_velocity);
 				writer.WriteValueSafe(_velocityMagnitude);
+				writer.WriteValueSafe(_collisionFlags);
 				writer.WriteValueSafe(_gravity);
 				writer.WriteValueSafe(_maxFallVelocity);
 				writer.WriteValueSafe(_jumpStrength);
@@ -297,7 +309,7 @@ namespace TowerDefense.Player {
 				writer.WriteValueSafe(_friction);
 				writer.WriteValueSafe(_airFriction);
 				writer.WriteValueSafe(_horizontalVelocity);
-				writer.WriteValueSafe(_timeSnapshot);
+				writer.WriteValueSafe(_actualMovement);
 
 				using (BitWriter bitWriter = writer.EnterBitwiseContext()) {
 					bitWriter.TryBeginWriteBits(6);
@@ -313,6 +325,7 @@ namespace TowerDefense.Player {
 				var reader = serializer.GetFastBufferReader();
 				reader.ReadValueSafe(out _velocity);
 				reader.ReadValueSafe(out _velocityMagnitude);
+				reader.ReadValueSafe(out _collisionFlags);
 				reader.ReadValueSafe(out _gravity);
 				reader.ReadValueSafe(out _maxFallVelocity);
 				reader.ReadValueSafe(out _jumpStrength);
@@ -323,7 +336,7 @@ namespace TowerDefense.Player {
 				reader.ReadValueSafe(out _friction);
 				reader.ReadValueSafe(out _airFriction);
 				reader.ReadValueSafe(out _horizontalVelocity);
-				reader.ReadValueSafe(out _timeSnapshot);
+				reader.ReadValueSafe(out _actualMovement);
 
 				using (BitReader bitReader = reader.EnterBitwiseContext()) {
 					bitReader.TryBeginReadBits(6);

@@ -1,5 +1,6 @@
 ﻿using AbsoluteCommons.Utility;
 using TowerDefense.Player;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace TowerDefense.Animations.Behaviors.Player {
@@ -13,7 +14,8 @@ namespace TowerDefense.Animations.Behaviors.Player {
 		// OnStateUpdate is called before OnStateUpdate is called on any state inside this state machine
 		public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
 			// If the taunt button is pressed, set the trigger
-			if (ClientInput.IsTriggered("Taunt"))
+			NetworkObject netSelf = animator.GetComponentInParent<NetworkObject>();
+			if ((!netSelf || netSelf.IsOwner) && ClientInput.IsTriggered("Taunt"))
 				animator.NetSetTriggerSafely("taunting");
 		}
 

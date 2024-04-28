@@ -213,6 +213,7 @@ GameObject:
   - component: {fileID: 122638701}
   - component: {fileID: 122638702}
   - component: {fileID: 122638703}
+  - component: {fileID: 122638704}
   m_Layer: 0
   m_Name: PlayerSpawn
   m_TagString: Untagged
@@ -270,6 +271,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   localClientPrefab: {fileID: 4775456782079660987, guid: 8ba185adfc8c5f24f9aeca8689ade765, type: 3}
   remoteClientPrefab: {fileID: 4775456782079660987, guid: 8ba185adfc8c5f24f9aeca8689ade765, type: 3}
+--- !u!114 &122638704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122638700}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 1
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 0
+  Interpolate: 1
+  SlerpPosition: 0
 --- !u!1 &202366063
 GameObject:
   m_ObjectHideFlags: 0
@@ -680,6 +712,8 @@ MonoBehaviour:
   _isTransitioning: 0
   _oldFirstPerson: 0
   _cameraShoulder: 0
+  _oldPosition: {x: 0, y: 0, z: 0}
+  _oldRotation: {x: 0, y: 0, z: 0, w: 0}
   _interceptor: {fileID: 0}
 --- !u!114 &723509318
 MonoBehaviour:
@@ -1487,9 +1521,9 @@ RectTransform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 1384342118}
   - {fileID: 723509316}
   - {fileID: 958421481}
-  - {fileID: 1384342118}
   - {fileID: 1342335161}
   - {fileID: 502305146}
   - {fileID: 2105800296}

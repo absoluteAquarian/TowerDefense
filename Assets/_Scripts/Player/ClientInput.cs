@@ -41,24 +41,26 @@ namespace TowerDefense.Player {
 			base.OnDestroy();
 		}
 
-		public static float GetRaw(string name) => Singleton && Singleton.IsLocalPlayer ? Singleton._map.GetRaw(name) : 0;
+		private static bool IsInputValid() => Singleton && Singleton._map != null;
 
-		public static float GetRaw(KeyCode key) => Singleton && Singleton.IsLocalPlayer ? Singleton._map.GetRaw(key) : 0;
+		public static float GetRaw(string name) => IsInputValid() ? Singleton._map.GetRaw(name) : 0;
 
-		public static bool IsInactive(string name) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsInactive(name);
+		public static float GetRaw(KeyCode key) => IsInputValid() ? Singleton._map.GetRaw(key) : 0;
 
-		public static bool IsInactive(KeyCode key) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsInactive(key);
+		public static bool IsInactive(string name) => IsInputValid() && Singleton._map.IsInactive(name);
 
-		public static bool IsTriggered(string name) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsTriggered(name);
+		public static bool IsInactive(KeyCode key) => IsInputValid() && Singleton._map.IsInactive(key);
 
-		public static bool IsTriggered(KeyCode key) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsTriggered(key);
+		public static bool IsTriggered(string name) => IsInputValid() && Singleton._map.IsTriggered(name);
 
-		public static bool IsPressed(string name) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsPressed(name);
+		public static bool IsTriggered(KeyCode key) => IsInputValid() && Singleton._map.IsTriggered(key);
 
-		public static bool IsPressed(KeyCode key) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsPressed(key);
+		public static bool IsPressed(string name) => IsInputValid() && Singleton._map.IsPressed(name);
 
-		public static bool IsReleased(string name) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsReleased(name);
+		public static bool IsPressed(KeyCode key) => IsInputValid() && Singleton._map.IsPressed(key);
 
-		public static bool IsReleased(KeyCode key) => Singleton && Singleton.IsLocalPlayer && Singleton._map.IsReleased(key);
+		public static bool IsReleased(string name) => IsInputValid() && Singleton._map.IsReleased(name);
+
+		public static bool IsReleased(KeyCode key) => IsInputValid() && Singleton._map.IsReleased(key);
 	}
 }

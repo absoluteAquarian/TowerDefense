@@ -8,13 +8,11 @@ namespace TowerDefense.Networking {
 
 		private NetworkVariable<PlayerCameraState> _cameraState;
 
-		public float RotationHorizontal => _cameraState.Value.RotationHorizontal;
+		public Quaternion FirstPersonLookRotation => _cameraState.Value.FirstPersonRotation;
 
-		public float RotationVertical => _cameraState.Value.RotationVertical;
+		public Quaternion ThirdPersonLookRotation => _cameraState.Value.ThirdPersonRotation;
 
 		public Vector3 FirstPersonCameraTarget => _cameraState.Value.FirstPersonTarget;
-
-		public Quaternion FirstPersonLookRotation => Quaternion.Euler(RotationVertical, RotationHorizontal, 0);
 
 		public Vector3 ThirdPersonLookTarget => _cameraState.Value.ThirdPersonLookTarget;
 
@@ -27,13 +25,16 @@ namespace TowerDefense.Networking {
 			if (IsOwner) {
 				// Update and transmit the network state
 				TransmitState();
-			}
+			} else
+				ConsumeState();
 		}
 
 		private void TransmitState() {
 			PlayerCameraState state = new PlayerCameraState(_camera);
 
 			if (base.IsServer)
+				_cameraState.Value = state;
+			else
 				TransmitStateServerRpc(state);
 		}
 
@@ -41,38 +42,29 @@ namespace TowerDefense.Networking {
 		private void TransmitStateServerRpc(PlayerCameraState state) {
 			_cameraState.Value = state;
 		}
+
+		private void ConsumeState() {
+			_camera.SetTargetRotation(ThirdPersonLookRotation, gameObject);
+		}
 	}
 
 	public struct PlayerCameraState : INetworkSerializable {
-		private float eulerX, eulerY;
+		private Vector3 fpEuler, tpEuler;
 
 		private Vector3 fpTarget;
 		private Vector3 tpLookTarget;
 
-		public float RotationHorizontal {
-			readonly get => eulerY;
-			set => eulerY = value;
-		}
+		public readonly Quaternion FirstPersonRotation => Quaternion.Euler(fpEuler);
 
-		public float RotationVertical {
-			readonly get => eulerX;
-			set => eulerX = value;
-		}
+		public readonly Quaternion ThirdPersonRotation => Quaternion.Euler(tpEuler);
 
-		public Vector3 FirstPersonTarget {
-			readonly get => fpTarget;
-			set => fpTarget = value;
-		}
+		public readonly Vector3 FirstPersonTarget => fpTarget;
 
-		public Vector3 ThirdPersonLookTarget {
-			readonly get => tpLookTarget;
-			set => tpLookTarget = value;
-		}
+		public readonly Vector3 ThirdPersonLookTarget => tpLookTarget;
 
 		public PlayerCameraState(CameraFollow camera) {
-			Vector3 euler = camera.GetFirstPersonLookRotation().eulerAngles;
-			eulerX = euler.x;
-			eulerY = euler.y;
+			fpEuler = camera.GetFirstPersonLookRotation().eulerAngles;
+			tpEuler = camera.GetThirdPersonLookRotation().eulerAngles;
 			fpTarget = camera.GetFirstPersonTarget();
 
 			if (camera.CheckCameraRaycast(out var hit, 100f))
@@ -85,15 +77,15 @@ namespace TowerDefense.Networking {
 			if (serializer.IsWriter) {
 				var writer = serializer.GetFastBufferWriter();
 
-				writer.WriteValueSafe(eulerX);
-				writer.WriteValueSafe(eulerY);
+				writer.WriteValueSafe(fpEuler);
+				writer.WriteValueSafe(tpEuler);
 				writer.WriteValueSafe(fpTarget);
 				writer.WriteValueSafe(tpLookTarget);
 			} else {
 				var reader = serializer.GetFastBufferReader();
 
-				reader.ReadValueSafe(out eulerX);
-				reader.ReadValueSafe(out eulerY);
+				reader.ReadValueSafe(out fpEuler);
+				reader.ReadValueSafe(out tpEuler);
 				reader.ReadValueSafe(out fpTarget);
 				reader.ReadValueSafe(out tpLookTarget);
 			}

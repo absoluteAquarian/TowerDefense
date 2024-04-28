@@ -22,33 +22,46 @@ namespace AbsoluteCommons.Objects {
 		private void Awake() {
 			_pool = new List<GameObject>(_initialCapacity);
 			_dirty = new BitArray(_initialCapacity, true);
-			_container = new GameObject("Dynamic Pool") {
-				hideFlags = _showPoolInHierarchy ? HideFlags.None : HideFlags.HideInHierarchy
-			};
-			_container.AddComponent<NetworkObject>();
-
-			// Make a global pool for objects in the world
-			// This is just so they don't clutter the scene list
-			if (Application.isEditor && !_visibleObjectContainer) {
-				_visibleObjectContainer = new GameObject("Visible Dynamic Pool Objects");
-				_visibleObjectContainer.AddComponent<NetworkObject>();
-			}
 		}
 
 		public override void OnNetworkSpawn() {
 			if (base.IsServer) {
-				NetworkObject netContainer = _container.GetComponent<NetworkObject>();
-				if (!netContainer.IsSpawned)
-					netContainer.SmartSpawn(true);
-
-				netContainer = _visibleObjectContainer.GetComponent<NetworkObject>();
-				if (!netContainer.IsSpawned)
-					netContainer.SmartSpawn(false);
-
+				// Instantiate the prefab at "Assets/Prefabs/Dynamic Pool.prefab"
+				_container = Instantiate(Resources.Load("Prefabs/Dynamic Pool")) as GameObject;
+				_container.hideFlags = _showPoolInHierarchy ? HideFlags.None : HideFlags.HideInHierarchy;
+				_container.GetComponent<NetworkObject>().Spawn(true);
+				
+				_container.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
 				_container.transform.SetParent(transform, false);
+
+				// Make a global pool for objects in the world
+				// This is just so they don't clutter the scene list
+				if (!_visibleObjectContainer) {
+					_visibleObjectContainer = Instantiate(Resources.Load("Prefabs/Visible Dynamic Pool Objects")) as GameObject;
+					_visibleObjectContainer.hideFlags = _showPoolInHierarchy ? HideFlags.None : HideFlags.HideInHierarchy;
+					_visibleObjectContainer.GetComponent<NetworkObject>().Spawn(true);
+
+					_visibleObjectContainer.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+				}
+
+				ContainerSpawnClientRpc(_container, _visibleObjectContainer);
 			}
 
 			base.OnNetworkSpawn();
+		}
+
+		[ClientRpc]
+		private void ContainerSpawnClientRpc(NetworkObjectReference containerRef, NetworkObjectReference visibleObjectContainerRef) {
+			GameObject container = containerRef;
+			if (!container)
+				return;
+
+			GameObject visibleObjectContainer = visibleObjectContainerRef;
+			if (!visibleObjectContainer)
+				return;
+
+			_container = container;
+			_visibleObjectContainer = visibleObjectContainer;
 		}
 
 		public void SetPrefab(GameObject prefab) {
@@ -77,7 +90,7 @@ namespace AbsoluteCommons.Objects {
 				_index = (_index + 1) % _pool.Count;
 
 				GameObject obj = _pool[_index];
-				if (obj == null || !obj.activeInHierarchy)
+				if (!obj || !obj.activeInHierarchy || (obj.TryGetComponent(out NetworkObject netObj) && !netObj.IsSpawned))
 					return PrepareObject(obj);
 			}
 
@@ -87,6 +100,8 @@ namespace AbsoluteCommons.Objects {
 		}
 
 		private GameObject PrepareObject(GameObject obj) {
+			bool hasNewObject = false;
+
 			if (!obj || _dirty[_index]) {
 				// A new object is needed since the prefab has changed or the object was destroyed
 				if (obj)
@@ -96,16 +111,22 @@ namespace AbsoluteCommons.Objects {
 
 				_dirty[_index] = false;
 
-				// Inform clients that the object has changed
-				AddNewObjectClientRpc(obj.GetComponent<NetworkObject>().NetworkObjectId, _index);
+				hasNewObject = true;
 			}
+
+			NetworkObject netObj = obj.GetComponent<NetworkObject>();
+			netObj.SmartSpawn(true, false);
 
 			obj.SetActive(true);
 			obj.transform.SetParent(Application.isEditor ? _visibleObjectContainer.transform : null, true);
 
-			NetworkObject netObj = obj.GetComponent<NetworkObject>();
-			if (!netObj.IsSpawned)
-				netObj.SmartSpawn(true);
+			netObj.SyncHierarchy(true);
+
+			if (hasNewObject) {
+				// Inform clients that the object has changed
+				// NOTE: NetworkObjectReference can only be used for spawned objects, hence why the RPC is delayed to here
+				AddNewObjectClientRpc(obj, _index);
+			}
 
 			PrepareObjectClientRpc(_index);
 
@@ -126,13 +147,15 @@ namespace AbsoluteCommons.Objects {
 			_pool.Add(newObj);
 			_dirty.Length++;
 			_dirty[_index] = false;
-			AddNewObjectClientRpc(newObj.GetComponent<NetworkObject>().NetworkObjectId, _index);
 			return newObj;
 		}
 
 		[ClientRpc]
-		private void AddNewObjectClientRpc(ulong networkObjectID, int index) {
-			GameObject obj = NetworkManager.Singleton.SpawnManager.SpawnedObjects[networkObjectID].gameObject;
+		private void AddNewObjectClientRpc(NetworkObjectReference newObjRef, int index) {
+			// Dereference will be null if the object doesn't exist
+			GameObject obj = newObjRef;
+			if (!obj)
+				return;
 
 			if (index < _pool.Count)
 				_pool[index] = obj;
@@ -146,14 +169,12 @@ namespace AbsoluteCommons.Objects {
 		}
 
 		private GameObject Create() {
-			GameObject obj = Instantiate(_prefab);
+			GameObject obj = Instantiate(_prefab, _container.transform, false);
 
-			if (!obj.TryGetComponent(out NetworkObject netObj)) {
+			if (!obj.TryGetComponent(out NetworkObject _)) {
 				Debug.LogError("[DynamicObjectPool] Prefab does not have a NetworkObject component");
 				return null;
 			}
-
-			netObj.SmartSpawn(true);
 
 			return obj;
 		}
@@ -186,7 +207,10 @@ namespace AbsoluteCommons.Objects {
 			obj.transform.SetParent(_container.GetComponent<NetworkObject>().IsSpawned ? _container.transform : null, true);
 		}
 
-		public T Get<T>() where T : Component => Get().GetComponent<T>();
+		public T Get<T>() where T : Component {
+			GameObject obj = Get();
+			return obj ? obj.GetComponent<T>() : null;
+		}
 
 		public void Return(GameObject obj) {
 			obj.SetActive(false);
@@ -202,8 +226,71 @@ namespace AbsoluteCommons.Objects {
 			if (base.IsServer) {
 				foreach (GameObject obj in _pool) {
 					ResetObjectState(obj);
-					obj.GetComponent<NetworkObject>().SmartDespawn(true);
+
+					if (obj)
+						obj.GetComponent<NetworkObject>().SmartDespawn(true);
 				}
+			}
+		}
+
+		protected override void OnSynchronize<T>(ref BufferSerializer<T> serializer) {
+			if (serializer.IsWriter) {
+				var writer = serializer.GetFastBufferWriter();
+
+				writer.WriteValueSafe(new NetworkObjectReference(_container));
+				writer.WriteValueSafe(new NetworkObjectReference(_visibleObjectContainer));
+
+				writer.WriteValueSafe(_pool.Count);
+
+				using (var bitWriter = writer.EnterBitwiseContext()) {
+					bitWriter.TryBeginWriteBits(_pool.Count * 2);
+
+					for (int i = 0; i < _pool.Count; i++) {
+						bitWriter.WriteBit(_dirty[i]);
+						bitWriter.WriteBit(_pool[i]);
+					}
+				}
+
+				foreach (GameObject obj in _pool) {
+					if (obj)
+						writer.WriteValueSafe(new NetworkObjectReference(obj));
+				}
+
+				writer.WriteValueSafe(_index);
+			} else {
+				var reader = serializer.GetFastBufferReader();
+
+				reader.ReadValueSafe(out NetworkObjectReference containerRef);
+				reader.ReadValueSafe(out NetworkObjectReference visibleObjectContainerRef);
+
+				_container = containerRef;
+				_visibleObjectContainer = visibleObjectContainerRef;
+
+				reader.ReadValueSafe(out int poolCount);
+				_pool = new List<GameObject>(poolCount);
+				_dirty = new BitArray(poolCount, false);
+
+				BitArray exists = new BitArray(poolCount);
+				using (var bitReader = reader.EnterBitwiseContext()) {
+					bitReader.TryBeginReadBits((uint)poolCount * 2);
+
+					for (int i = 0; i < poolCount; i++) {
+						bitReader.ReadBit(out bool dirty);
+						_dirty[i] = dirty;
+						bitReader.ReadBit(out bool existsBit);
+						exists[i] = existsBit;
+					}
+				}
+
+				for (int i = 0; i < poolCount; i++) {
+					if (exists[i]) {
+						reader.ReadValueSafe(out NetworkObjectReference objRef);
+						_pool.Add(objRef);
+					} else
+						_pool.Add(null);
+				}
+
+				reader.ReadValueSafe(out _index);
 			}
 		}
 	}

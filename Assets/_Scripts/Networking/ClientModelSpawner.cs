@@ -28,7 +28,6 @@ namespace TowerDefense.Networking {
 
 			// Move the player to the spawn point
 			obj.transform.SetPositionAndRotation(gameObject.transform.position, gameObject.transform.rotation);
-			obj.transform.SetParent(null, true);
 		}
 	}
 }

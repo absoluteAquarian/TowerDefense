@@ -48,6 +48,8 @@ namespace TowerDefense.CameraComponents {
 		[SerializeField, ReadOnly] private bool _isTransitioning;
 		[SerializeField, ReadOnly] private bool _oldFirstPerson;
 		[SerializeField, ReadOnly] private float _cameraShoulder;
+		[SerializeField, ReadOnly] private Vector3 _oldPosition;
+		[SerializeField, ReadOnly] private Quaternion _oldRotation;
 
 		[SerializeField, ReadOnly] private CameraFollowTargetTransformInterceptor _interceptor;
 
@@ -82,6 +84,13 @@ namespace TowerDefense.CameraComponents {
 
 			HidePlayerInTransitionAndFirstPerson();
 
+			_oldPosition = transform.position;
+			_oldRotation = transform.rotation;
+
+			UpdatePositionAndRotation();
+		}
+
+		private void UpdatePositionAndRotation() {
 			if (_isTransitioning)
 				HandleTransitionMovement();
 			else if (firstPerson)
@@ -94,6 +103,14 @@ namespace TowerDefense.CameraComponents {
 
 		void LateUpdate() {
 		//	HandleCameraRotation();
+		}
+
+		public void RecalculatePositionAndRotation() {
+			// Restore the old position and rotation
+			transform.SetPositionAndRotation(_oldPosition, _oldRotation);
+
+			// Perform the movement and rotation calculations again
+			UpdatePositionAndRotation();
 		}
 
 		private void CheckTransitionTime() {
@@ -340,10 +357,7 @@ namespace TowerDefense.CameraComponents {
 					if (VectorMath.DistanceSquared(target.transform.position, hit.point) >= localLookAnchor.sqrMagnitude) {
 						Quaternion rotation = RotationMath.RotationTo(target.transform.position, hit.point);
 
-						if (_interceptor != null)
-							_interceptor.AdjustTransform(target.transform, rotation);
-						else
-							target.transform.rotation = rotation;
+						SetTargetRotation(rotation, target);
 
 						rayHasHit = true;
 
@@ -358,10 +372,7 @@ namespace TowerDefense.CameraComponents {
 				// Rotate the player to face the rotation of the camera
 				Quaternion rotation = Quaternion.Euler(_view.ViewRotation);
 
-				if (_interceptor != null)
-					_interceptor.AdjustTransform(target.transform, rotation);
-				else
-					target.transform.rotation = rotation;
+				SetTargetRotation(rotation, target);
 
 				// Draw a line from the camera with the view rotation
 				if (CameraTransforms.DisplayCameraLines)
@@ -371,6 +382,16 @@ namespace TowerDefense.CameraComponents {
 			// Draw a line from the player to the player's forward vector
 			if (CameraTransforms.DisplayCameraLines)
 				Debug.DrawRay(target.transform.position + target.transform.up * (firstPerson ? firstPersonCameraHeight : thirdPersonCameraHeight), target.transform.forward * 5, Color.blue);
+		}
+
+		public void SetTargetRotation(Quaternion rotation, GameObject obj) {
+			if (!obj)
+				return;
+
+			if (_interceptor)
+				_interceptor.AdjustTransform(obj.transform, rotation);
+			else
+				obj.transform.rotation = rotation;
 		}
 
 		public bool CheckCameraRaycast(out RaycastHit hit, float distance = 100) {
