@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using AbsoluteCommons.Utility;
+using UnityEngine;
 
 namespace TowerDefense.Meta {
 	public class DamagingCollider : MonoBehaviour {
@@ -6,8 +7,8 @@ namespace TowerDefense.Meta {
 
 		// TODO: repeated strikes, not hitting the owner, layer mask ignore
 		private void OnCollisionEnter(Collision collision) {
-			if (collision.gameObject.TryGetComponent(out DamageableCollider damageable))
-				damageable.Strike(damage);
+			if (collision.gameObject.TryGetComponentInParent(out DamageableCollider damageable))
+				damageable.Strike(gameObject, damage);
 		}
 	}
 }

@@ -412,9 +412,11 @@ namespace TowerDefense.Player {
 
 					GameObject hitObject = hit.collider.gameObject;
 
+				//	Debug.Log($"Hit {hitObject.name} at {hit.point}.");
+
 					// TODO: piercing
-					if (hitObject.TryGetComponent(out DamageableCollider target))
-						target.Strike(bullet.GetComponent<DamagingCollider>().damage);
+					if (hitObject.TryGetComponentInParent(out DamageableCollider target))
+						target.Strike(bullet.gameObject, bullet.GetComponent<DamagingCollider>().damage);
 
 					// Disable further collisions
 					bullet.GetComponent<DamagingCollider>().enabled = false;

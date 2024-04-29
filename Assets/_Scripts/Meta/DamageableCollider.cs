@@ -1,5 +1,6 @@
 ﻿using AbsoluteCommons.Attributes;
 using AbsoluteCommons.Utility;
+using System;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -17,24 +18,43 @@ namespace TowerDefense.Meta {
 			_currentHealth = new NetworkVariable<float>(maximumHealth, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 		}
 
-		public void Strike(float damage) {
-			Debug.Log($"Requesting strike on {gameObject.name} for {damage} damage.");
+		public void Strike(GameObject actor, float damage) {
+			string timeFormat = TimeSpan.FromSeconds(Time.time).ToString(@"hh\:mm\:ss\:fff");
+			Debug.Log($"[{timeFormat}] Requesting strike on {gameObject.name} for {damage} damage.");
 
-			TakeDamageServerRpc(damage);
+			TakeDamageServerRpc(actor, damage);
 		}
 
 		[ServerRpc(RequireOwnership = false)]
-		private void TakeDamageServerRpc(float damage) {
+		private void TakeDamageServerRpc(NetworkObjectReference actorRef, float damage) {
+			GameObject actor = actorRef;
+			if (!actor)
+				return;
+
 			_currentHealth.Value -= damage;
 
 			SendMessage(nameof(IDamageable.OnStrike), new StruckObjectMeta(gameObject, gameObject, damage, _currentHealth.Value), SendMessageOptions.DontRequireReceiver);
+			TakeDamageClientRpc(actorRef, damage);
 
-			Debug.Log($"{gameObject.name} took {damage} damage and has {_currentHealth.Value} health remaining.");
+			string timeFormat = TimeSpan.FromSeconds(Time.time).ToString(@"hh\:mm\:ss\:fff");
+			Debug.Log($"[{timeFormat}] {gameObject.name} took {damage} damage and has {_currentHealth.Value} health remaining.");
 
 			if (_currentHealth.Value <= 0) {
 				GameObject self = gameObject;
 				TypeExtensions.DestroyDespawnOrReturnToPoolAndSetNull(ref self);
 			}
+		}
+
+		[ClientRpc]
+		private void TakeDamageClientRpc(NetworkObjectReference actorRef, float damage) {
+			if (IsServer)
+				return;
+
+			GameObject actor = actorRef;
+			if (!actor)
+				return;
+
+			SendMessage(nameof(IDamageable.OnStrike), new StruckObjectMeta(actor, gameObject, damage, _currentHealth.Value), SendMessageOptions.DontRequireReceiver);
 		}
 
 		private void LateUpdate() {

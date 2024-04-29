@@ -52,16 +52,13 @@ namespace AbsoluteCommons.Objects {
 
 		[ClientRpc]
 		private void ContainerSpawnClientRpc(NetworkObjectReference containerRef, NetworkObjectReference visibleObjectContainerRef) {
-			GameObject container = containerRef;
-			if (!container)
-				return;
+			_container = containerRef;
+			if (!_container)
+				Debug.LogError("[DynamicObjectPool] [ContainerSpawnClientRpc] Read object reference for _container is null");
 
-			GameObject visibleObjectContainer = visibleObjectContainerRef;
-			if (!visibleObjectContainer)
-				return;
-
-			_container = container;
-			_visibleObjectContainer = visibleObjectContainer;
+			_visibleObjectContainer = visibleObjectContainerRef;
+			if (!_visibleObjectContainer)
+				Debug.LogError("[DynamicObjectPool] [ContainerSpawnClientRpc] Read object reference for _visibleObjectContainer is null");
 		}
 
 		public void SetPrefab(GameObject prefab) {
@@ -182,15 +179,6 @@ namespace AbsoluteCommons.Objects {
 		[ServerRpc]
 		private void ResetObjectStateServerRpc(int index) {
 			ResetObjectState(_pool[index]);
-
-			ResetObjectStateClientRpc(index);
-		}
-
-		[ClientRpc]
-		private void ResetObjectStateClientRpc(int index) {
-			GameObject obj = _pool[index];
-
-			obj.SetActive(false);
 		}
 
 		private void ResetObjectState(GameObject obj) {
@@ -264,7 +252,12 @@ namespace AbsoluteCommons.Objects {
 				reader.ReadValueSafe(out NetworkObjectReference visibleObjectContainerRef);
 
 				_container = containerRef;
+				if (!_container)
+					Debug.LogError("[DynamicObjectPool] [OnSynchronize] Read object reference for _container is null");
+
 				_visibleObjectContainer = visibleObjectContainerRef;
+				if (!_visibleObjectContainer)
+					Debug.LogError("[DynamicObjectPool] [OnSynchronize] Read object reference for _visibleObjectContainer is null");
 
 				reader.ReadValueSafe(out int poolCount);
 				_pool = new List<GameObject>(poolCount);

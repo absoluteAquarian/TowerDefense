@@ -41,5 +41,19 @@ namespace AbsoluteCommons.Utility {
 				obj = null;
 			}
 		}
+
+		public static bool TryGetComponentInParent<T>(this GameObject obj, out T component) where T : Component {
+			Transform current = obj.transform;
+
+			while (current) {
+				if (current.TryGetComponent(out component))
+					return true;
+
+				current = current.parent;
+			}
+
+			component = null;
+			return false;
+		}
 	}
 }
