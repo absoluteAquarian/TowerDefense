@@ -26,8 +26,18 @@ namespace TowerDefense.Networking {
 			// obj.AddComponent<DeferredSpawning>();  // Ensure that child objects are also spawned
 			netObj.SpawnAsPlayerObject(clientID, true);
 
+			SetClientPositionClientRpc(netObj);
+		}
+
+		[ClientRpc]
+		private void SetClientPositionClientRpc(NetworkObjectReference obj) {
+			NetworkObject clientObj = obj;
+			if (!clientObj)
+				return;
+			
 			// Move the player to the spawn point
-			obj.transform.SetPositionAndRotation(gameObject.transform.position, gameObject.transform.rotation);
+			clientObj.transform.SetPositionAndRotation(gameObject.transform.position, gameObject.transform.rotation);
+			Debug.Log($"Client {clientObj.OwnerClientId} object spawned at {gameObject.transform.position}");
 		}
 	}
 }
