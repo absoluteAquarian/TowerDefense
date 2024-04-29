@@ -1,5 +1,6 @@
 ﻿using AbsoluteCommons.Attributes;
 using AbsoluteCommons.Components;
+using AbsoluteCommons.Utility;
 using UnityEngine;
 
 namespace TowerDefense.Weapons.Projectiles {
@@ -10,6 +11,8 @@ namespace TowerDefense.Weapons.Projectiles {
 		[SerializeField] private LayerMask _ignoreMask;
 
 		public float Range => _range;
+
+		public LayerMask CollisionMask => _ignoreMask.Exclusion();
 
 		private BulletTrailHandler _trail;
 

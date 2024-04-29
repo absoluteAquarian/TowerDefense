@@ -3,6 +3,7 @@ using AbsoluteCommons.Components;
 using AbsoluteCommons.Objects;
 using AbsoluteCommons.Utility;
 using TowerDefense.CameraComponents;
+using TowerDefense.Meta;
 using TowerDefense.Networking;
 using TowerDefense.Weapons;
 using TowerDefense.Weapons.Projectiles;
@@ -406,12 +407,17 @@ namespace TowerDefense.Player {
 			if (base.IsServer) {
 				// Check if the raycast hits anything
 				Ray ray = new Ray(origin, forward);
-				if (Physics.Raycast(ray, out RaycastHit hit, bullet.Range, gameObject.layer.ToLayerMask().Exclusion())) {
+				if (Physics.Raycast(ray, out RaycastHit hit, bullet.Range, bullet.CollisionMask)) {
 					end = hit.point;
 
 					GameObject hitObject = hit.collider.gameObject;
 
-					// TODO: apply damage to the hit object
+					// TODO: piercing
+					if (hitObject.TryGetComponent(out DamageableCollider target))
+						target.Strike(bullet.GetComponent<DamagingCollider>().damage);
+
+					// Disable further collisions
+					bullet.GetComponent<DamagingCollider>().enabled = false;
 				}
 			}
 

@@ -2,13 +2,18 @@
 
 namespace AbsoluteCommons.Components {
 	[RequireComponent(typeof(PhysicsMetricsInitializer), typeof(PhysicsMetrics))]
-	[DefaultExecutionOrder(-99)]
 	public class PhysicsMetricsFinalizer : MonoBehaviour {
 		private void Update() {
+			var initializer = GetComponent<PhysicsMetricsInitializer>();
+			if (!initializer.hasCheckedGravity) {
+				Debug.LogError($"[PhysicsMetricsFinalizer] Object {gameObject.name} has not checked gravity yet. Move PhysicsMetricsInitializer component to above PhysicsMetricsFinalizer component.");
+				return;
+			}
+
 			// Restore the global gravity
-			PhysicsMetrics metrics = GetComponent<PhysicsMetrics>();
-			if (metrics.useGravityOverride)
-				Physics.gravity = GetComponent<PhysicsMetricsInitializer>().cachedGravity;
+			Physics.gravity = initializer.cachedGravity;
+
+			initializer.hasCheckedGravity = false;
 		}
 	}
 }
